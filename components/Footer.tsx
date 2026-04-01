@@ -6,47 +6,43 @@ export default function Footer() {
   return (
     <footer style={{
       padding: '40px 0',
-      borderTop: '1px solid rgba(255,255,255,0.05)',
+      borderTop: '1px solid var(--border-subtle)',
     }}>
       <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <a href="#" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
           <div style={{
-            width: '32px',
-            height: '32px',
-            background: 'linear-gradient(135deg, #00f0ff, #ff00ff)',
+            width: '30px',
+            height: '30px',
+            background: 'var(--gradient-accent)',
             borderRadius: '8px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontFamily: 'Space Grotesk, sans-serif',
-            fontWeight: 700,
-            fontSize: '16px',
-            color: '#000',
+            fontFamily: 'Outfit',
+            fontWeight: 800,
+            fontSize: '14px',
+            color: '#fff',
+            flexShrink: 0,
           }}>
             U
           </div>
-          <span style={{
-            fontFamily: 'Space Grotesk, sans-serif',
-            fontSize: '16px',
-            fontWeight: 700,
-            color: '#fff',
-          }}>
-            UN<span style={{ color: '#00f0ff' }}>VIBE</span>
+          <span style={{ fontFamily: 'Outfit', fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>
+            UN<span style={{ color: 'var(--accent)' }}>VIBE</span>
           </span>
-        </div>
+        </a>
 
-        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>
+        <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
           Open source · Built for developers who ship
         </p>
 
-        <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
           <a
-            href="https://github.com/yevgeniusr/unvibe"
+            href="https://github.com/nanachichan3/unvibe"
             target="_blank"
             rel="noopener"
-            style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', transition: 'color 0.2s' }}
           >
-            <Github size={16} /> GitHub
+            <Github size={15} /> GitHub
           </a>
         </div>
       </div>

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Trophy, Zap, Target, RefreshCw, CheckCircle, XCircle, Brain } from 'lucide-react';
-import type { GameQuestion, GameSession } from '../lib/types';
+import { Trophy, Zap, Target, RefreshCw, CheckCircle, XCircle, Brain, Swords } from 'lucide-react';
+import type { GameQuestion, GameSession } from '@/lib/types';
 
 interface GamesProps {
   questions: GameQuestion[];
@@ -25,7 +25,7 @@ export default function Games({ questions }: GamesProps) {
     }
     return { totalQuestions: 0, correctAnswers: 0, streak: 0, highStreak: 0, questionsAnswered: [] };
   });
-  const [currentQ, setCurrentQ] = useState<number>(0);
+  const [currentQ, setCurrentQ] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [gameMode, setGameMode] = useState<'quiz' | 'duel'>('quiz');
@@ -38,30 +38,28 @@ export default function Games({ questions }: GamesProps) {
   const q = questions[currentQ];
   const answered = selected !== null;
   const correct = selected === q?.answer;
+  const accuracy = session.totalQuestions > 0
+    ? Math.round((session.correctAnswers / session.totalQuestions) * 100)
+    : 0;
 
   const handleAnswer = (answer: string) => {
     if (answered) return;
     setSelected(answer);
     setShowResult(true);
-
+    const isCorrect = answer === q.answer;
     const newSession = {
       ...session,
       totalQuestions: session.totalQuestions + 1,
-      correctAnswers: session.correctAnswers + (answer === q.answer ? 1 : 0),
-      streak: answer === q.answer ? session.streak + 1 : 0,
-      highStreak: Math.max(
-        session.highStreak,
-        answer === q.answer ? session.streak + 1 : 0
-      ),
+      correctAnswers: session.correctAnswers + (isCorrect ? 1 : 0),
+      streak: isCorrect ? session.streak + 1 : 0,
+      highStreak: Math.max(session.highStreak, isCorrect ? session.streak + 1 : 0),
       questionsAnswered: [...session.questionsAnswered, q.id],
     };
     setSession(newSession);
-
-    // Simulate AI duel score
     if (gameMode === 'duel') {
       const aiCorrect = Math.random() > 0.4;
       setDuelScore(prev => ({
-        player: prev.player + (answer === q.answer ? 1 : 0),
+        player: prev.player + (isCorrect ? 1 : 0),
         ai: prev.ai + (aiCorrect ? 1 : 0),
       }));
     }
@@ -80,18 +78,14 @@ export default function Games({ questions }: GamesProps) {
     setDuelScore({ player: 0, ai: 0 });
   };
 
-  const accuracy = session.totalQuestions > 0
-    ? Math.round((session.correctAnswers / session.totalQuestions) * 100)
-    : 0;
-
   if (questions.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '80px 40px' }}>
-        <Brain size={64} color="rgba(255,255,255,0.2)" style={{ marginBottom: '24px' }} />
-        <h3 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: '24px', marginBottom: '12px' }}>
-          No Questions Available
-        </h3>
-        <p style={{ color: 'rgba(255,255,255,0.5)' }}>
+        <div style={{ width: '72px', height: '72px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+          <Brain size={32} color="var(--text-muted)" />
+        </div>
+        <h3 style={{ fontFamily: 'Outfit', fontSize: '22px', marginBottom: '12px' }}>No Questions Yet</h3>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
           Upload more files or enable AI analysis to generate game questions.
         </p>
       </div>
@@ -99,130 +93,109 @@ export default function Games({ questions }: GamesProps) {
   }
 
   return (
-    <div className="fade-in">
-      {/* Stats Bar */}
-      <div className="grid-4" style={{ marginBottom: '32px' }}>
-        <div className="card" style={{ textAlign: 'center' }}>
-          <Trophy size={24} color="#f59e0b" style={{ marginBottom: '8px' }} />
-          <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: '32px', fontWeight: 700, color: '#f59e0b' }}>
-            {session.correctAnswers}
+    <div>
+      {/* Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
+        {[
+          { icon: Trophy, label: 'Correct', value: session.correctAnswers, color: '#34D399' },
+          { icon: Target, label: 'Accuracy', value: `${accuracy}%`, color: 'var(--accent)' },
+          { icon: Zap, label: 'Streak', value: session.streak, color: '#FBBF24' },
+          { icon: Trophy, label: 'Best', value: session.highStreak, color: '#EC4899' },
+        ].map(({ icon: Icon, label, value, color }, i) => (
+          <div key={i} className="card animate-fade-up" style={{ padding: '24px', animationDelay: `${i * 60}ms`, textAlign: 'center' }}>
+            <Icon size={20} color={color} style={{ marginBottom: '10px' }} />
+            <div style={{ fontFamily: 'Outfit', fontSize: '28px', fontWeight: 700, color, letterSpacing: '-0.02em' }}>{value}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'JetBrains Mono', marginTop: '4px' }}>{label}</div>
           </div>
-          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>Correct</div>
-        </div>
-        <div className="card" style={{ textAlign: 'center' }}>
-          <Target size={24} color="#00f0ff" style={{ marginBottom: '8px' }} />
-          <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: '32px', fontWeight: 700, color: '#00f0ff' }}>
-            {accuracy}%
-          </div>
-          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>Accuracy</div>
-        </div>
-        <div className="card" style={{ textAlign: 'center' }}>
-          <Zap size={24} color="#a855f7" style={{ marginBottom: '8px' }} />
-          <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: '32px', fontWeight: 700, color: '#a855f7' }}>
-            {session.streak}
-          </div>
-          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>Streak</div>
-        </div>
-        <div className="card" style={{ textAlign: 'center' }}>
-          <Trophy size={24} color="#10b981" style={{ marginBottom: '8px' }} />
-          <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: '32px', fontWeight: 700, color: '#10b981' }}>
-            {session.highStreak}
-          </div>
-          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>Best Streak</div>
-        </div>
+        ))}
       </div>
 
-      {/* Game Mode Toggle */}
+      {/* Mode toggle */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', justifyContent: 'center' }}>
-        <button
-          onClick={() => { setGameMode('quiz'); resetGame(); }}
-          style={{
-            padding: '12px 24px',
-            background: gameMode === 'quiz' ? 'rgba(0, 240, 255, 0.1)' : 'transparent',
-            border: `1px solid ${gameMode === 'quiz' ? 'rgba(0, 240, 255, 0.3)' : 'rgba(255,255,255,0.1)'}`,
-            borderRadius: '8px',
-            color: gameMode === 'quiz' ? '#00f0ff' : 'rgba(255,255,255,0.6)',
-            cursor: 'pointer',
-            fontWeight: 500,
-          }}
-        >
-          Solo Quiz
-        </button>
-        <button
-          onClick={() => setGameMode('duel')}
-          style={{
-            padding: '12px 24px',
-            background: gameMode === 'duel' ? 'rgba(168, 85, 247, 0.1)' : 'transparent',
-            border: `1px solid ${gameMode === 'duel' ? 'rgba(168, 85, 247, 0.3)' : 'rgba(255,255,255,0.1)'}`,
-            borderRadius: '8px',
-            color: gameMode === 'duel' ? '#a855f7' : 'rgba(255,255,255,0.6)',
-            cursor: 'pointer',
-            fontWeight: 500,
-          }}
-        >
-          🤖 AI Duel
-        </button>
+        {[
+          { id: 'quiz' as const, label: 'Solo Quiz' },
+          { id: 'duel' as const, label: '🤖 AI Duel' },
+        ].map(({ id, label }) => (
+          <button
+            key={id}
+            onClick={() => { setGameMode(id); resetGame(); }}
+            style={{
+              padding: '12px 24px',
+              background: gameMode === id ? 'var(--accent-subtle)' : 'var(--bg-card)',
+              border: `1px solid ${gameMode === id ? 'rgba(123,92,255,0.3)' : 'var(--border)'}`,
+              borderRadius: 'var(--radius-md)',
+              color: gameMode === id ? 'var(--accent)' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              fontFamily: 'Outfit',
+              fontWeight: 600,
+              fontSize: '14px',
+              transition: 'all 0.2s',
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
-      {/* Duel Score */}
+      {/* Duel score */}
       {gameMode === 'duel' && (
-        <div className="card" style={{ marginBottom: '24px', textAlign: 'center' }}>
-          <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: '48px', fontWeight: 700, marginBottom: '16px' }}>
-            <span style={{ color: '#00f0ff' }}>{duelScore.player}</span>
-            <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 16px' }}>vs</span>
-            <span style={{ color: '#a855f7' }}>{duelScore.ai}</span>
+        <div className="card animate-fade-up" style={{ padding: '28px', marginBottom: '24px', textAlign: 'center' }}>
+          <div style={{ fontFamily: 'Outfit', fontSize: '52px', fontWeight: 800, letterSpacing: '-0.03em' }}>
+            <span style={{ color: 'var(--accent)' }}>{duelScore.player}</span>
+            <span style={{ color: 'var(--text-muted)', margin: '0 20px' }}>:</span>
+            <span style={{ color: '#EC4899' }}>{duelScore.ai}</span>
           </div>
-          <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)' }}>
-            You vs AI (AI wins ~40% of questions)
-          </div>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px' }}>
+            You vs AI — AI wins ~40% of questions
+          </p>
         </div>
       )}
 
-      {/* Question Card */}
-      <div className="card" style={{ maxWidth: '700px', margin: '0 auto', textAlign: 'center' }}>
-        <div style={{
-          display: 'inline-block',
-          padding: '6px 12px',
-          background: q.difficulty === 'easy' ? 'rgba(16, 185, 129, 0.1)' : q.difficulty === 'medium' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-          borderRadius: '100px',
-          fontSize: '11px',
-          fontWeight: 600,
-          color: q.difficulty === 'easy' ? '#10b981' : q.difficulty === 'medium' ? '#f59e0b' : '#ef4444',
-          textTransform: 'uppercase',
-          letterSpacing: '0.1em',
-          marginBottom: '24px',
-        }}>
-          {q.type.replace('-', ' ')} · {q.difficulty}
+      {/* Question card */}
+      <div className="card animate-fade-up" style={{ maxWidth: '680px', margin: '0 auto', padding: '40px', animationDelay: '200ms' }}>
+        {/* Difficulty + type */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+          <span style={{
+            padding: '6px 16px',
+            background: q.difficulty === 'easy' ? 'rgba(52,211,153,0.1)' : q.difficulty === 'medium' ? 'rgba(251,191,36,0.1)' : 'rgba(248,113,113,0.1)',
+            border: `1px solid ${q.difficulty === 'easy' ? 'rgba(52,211,153,0.2)' : q.difficulty === 'medium' ? 'rgba(251,191,36,0.2)' : 'rgba(248,113,113,0.2)'}`,
+            borderRadius: '100px',
+            fontSize: '11px',
+            fontFamily: 'JetBrains Mono',
+            fontWeight: 600,
+            color: q.difficulty === 'easy' ? '#34D399' : q.difficulty === 'medium' ? '#FBBF24' : '#F87171',
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+          }}>
+            {q.type.replace('-', ' ')} · {q.difficulty}
+          </span>
         </div>
 
         <h3 style={{
-          fontFamily: 'Space Grotesk, sans-serif',
-          fontSize: '24px',
+          fontFamily: 'Outfit',
+          fontSize: '22px',
           fontWeight: 600,
+          textAlign: 'center',
           marginBottom: '32px',
           lineHeight: 1.4,
+          letterSpacing: '-0.01em',
         }}>
           {q.question}
         </h3>
 
-        <div style={{ display: 'grid', gap: '12px', textAlign: 'left' }}>
+        {/* Options */}
+        <div style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
           {q.options.map((option, i) => {
             const isSelected = selected === option;
             const isCorrect = option === q.answer;
-            let bg = 'rgba(255,255,255,0.03)';
-            let border = 'rgba(255,255,255,0.08)';
+            let bg = 'var(--bg-elevated)';
+            let border = 'var(--border)';
 
             if (showResult) {
-              if (isCorrect) {
-                bg = 'rgba(16, 185, 129, 0.15)';
-                border = '#10b981';
-              } else if (isSelected && !isCorrect) {
-                bg = 'rgba(239, 68, 68, 0.15)';
-                border = '#ef4444';
-              }
+              if (isCorrect) { bg = 'rgba(52,211,153,0.1)'; border = '#34D399'; }
+              else if (isSelected) { bg = 'rgba(248,113,113,0.1)'; border = '#F87171'; }
             } else if (isSelected) {
-              bg = 'rgba(0, 240, 255, 0.1)';
-              border = '#00f0ff';
+              bg = 'var(--accent-subtle)'; border = 'var(--accent)';
             }
 
             return (
@@ -234,65 +207,64 @@ export default function Games({ questions }: GamesProps) {
                   padding: '16px 20px',
                   background: bg,
                   border: `1px solid ${border}`,
-                  borderRadius: '12px',
+                  borderRadius: 'var(--radius-md)',
                   color: '#fff',
-                  fontSize: '15px',
+                  fontSize: '14px',
                   cursor: answered ? 'default' : 'pointer',
-                  transition: 'all 0.2s ease',
+                  transition: 'all 0.2s',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px',
+                  gap: '14px',
+                  textAlign: 'left',
                 }}
               >
                 <span style={{
-                  width: '28px',
-                  height: '28px',
-                  background: 'rgba(255,255,255,0.05)',
+                  width: '28px', height: '28px',
+                  background: 'var(--bg-card)',
                   borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '13px',
-                  fontWeight: 600,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '12px', fontFamily: 'JetBrains Mono', fontWeight: 600,
                   flexShrink: 0,
+                  color: isSelected ? 'var(--accent)' : 'var(--text-muted)',
                 }}>
                   {String.fromCharCode(65 + i)}
                 </span>
                 <span style={{ flex: 1 }}>{option}</span>
-                {showResult && isCorrect && <CheckCircle size={20} color="#10b981" />}
-                {showResult && isSelected && !isCorrect && <XCircle size={20} color="#ef4444" />}
+                {showResult && isCorrect && <CheckCircle size={18} color="#34D399" />}
+                {showResult && isSelected && !isCorrect && <XCircle size={18} color="#F87171" />}
               </button>
             );
           })}
         </div>
 
+        {/* Result explanation */}
         {showResult && (
           <div style={{
-            marginTop: '24px',
             padding: '16px 20px',
-            background: correct ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-            borderRadius: '12px',
-            textAlign: 'left',
+            background: correct ? 'rgba(52,211,153,0.08)' : 'rgba(248,113,113,0.08)',
+            border: `1px solid ${correct ? 'rgba(52,211,153,0.2)' : 'rgba(248,113,113,0.2)'}`,
+            borderRadius: 'var(--radius-md)',
+            marginBottom: '24px',
           }}>
-            <p style={{ fontWeight: 600, color: correct ? '#10b981' : '#ef4444', marginBottom: '4px' }}>
+            <p style={{ fontWeight: 600, color: correct ? '#34D399' : '#F87171', marginBottom: '4px', fontFamily: 'Outfit' }}>
               {correct ? '✓ Correct!' : '✗ Wrong'}
             </p>
-            <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)' }}>
+            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
               {q.explanation}
             </p>
           </div>
         )}
 
-        <div style={{ marginTop: '32px', display: 'flex', gap: '12px', justifyContent: 'center' }}>
-          <button onClick={nextQuestion} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            Next Question
-            <RefreshCw size={16} />
+        {/* Next button */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+          <button onClick={nextQuestion} className="btn-primary">
+            Next Question <RefreshCw size={15} />
           </button>
         </div>
 
-        <div style={{ marginTop: '16px', fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>
+        <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '12px', color: 'var(--text-muted)' }}>
           Question {currentQ + 1} of {questions.length}
-        </div>
+        </p>
       </div>
     </div>
   );

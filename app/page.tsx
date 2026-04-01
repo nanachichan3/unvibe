@@ -1,14 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import Navbar from '../components/Navbar';
-import Hero from '../components/Hero';
-import Features from '../components/Features';
-import HowItWorks from '../components/HowItWorks';
-import UploadZone from '../components/UploadZone';
-import Dashboard from '../components/Dashboard';
-import Footer from '../components/Footer';
-import type { FileInfo, ComplexityMetrics, GameQuestion } from '../lib/types';
+import Navbar from '@/components/Navbar';
+import Hero from '@/components/Hero';
+import Features from '@/components/Features';
+import HowItWorks from '@/components/HowItWorks';
+import Dashboard from '@/components/Dashboard';
+import Footer from '@/components/Footer';
+import type { FileInfo, ComplexityMetrics, GameQuestion } from '@/lib/types';
 
 export default function Home() {
   const [hasData, setHasData] = useState(false);
@@ -29,18 +28,14 @@ export default function Home() {
   return (
     <main>
       <Navbar />
-      <Hero />
+      <Hero onDataLoaded={handleDataLoaded} />
       <Features />
       <HowItWorks />
-
-      {!hasData && <UploadZone onDataLoaded={handleDataLoaded} />}
-
       {data && (
         <div id="dashboard">
           <Dashboard files={data.files} metrics={data.metrics} questions={data.questions} />
         </div>
       )}
-
       <Footer />
     </main>
   );

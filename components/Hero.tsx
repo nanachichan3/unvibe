@@ -1,163 +1,275 @@
 'use client';
 
-export default function Hero() {
+import { useState, useCallback, useRef } from 'react';
+import type { FileInfo, ComplexityMetrics, GameQuestion } from '@/lib/types';
+import { parseArchive, calculateMetrics, generateStaticQuestions } from '@/lib/parser';
+import { Upload, FileArchive, Shield, Zap, Github } from 'lucide-react';
+
+interface HeroProps {
+  onDataLoaded: (files: FileInfo[], metrics: ComplexityMetrics, questions: GameQuestion[]) => void;
+}
+
+export default function Hero({ onDataLoaded }: HeroProps) {
+  const [dragging, setDragging] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = useCallback(async (file: File) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const files = await parseArchive(file);
+      if (files.length === 0) {
+        setError('No readable files found. Make sure you\'re uploading a valid zip/tar archive.');
+        setLoading(false);
+        return;
+      }
+      const metrics = calculateMetrics(files);
+      const questions = generateStaticQuestions(files, metrics);
+      onDataLoaded(files, metrics, questions);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to parse archive');
+      setLoading(false);
+    }
+  }, [onDataLoaded]);
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  }, [handleFile]);
+
+  const onChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFile(file);
+  }, [handleFile]);
+
   return (
     <section style={{
       minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
-      padding: '120px 0 80px',
+      paddingTop: '80px',
       position: 'relative',
       overflow: 'hidden',
     }}>
+      {/* Background gradient */}
       <div style={{
         position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'radial-gradient(ellipse at 50% 0%, rgba(0, 240, 255, 0.12) 0%, transparent 60%)',
+        inset: 0,
+        background: `
+          radial-gradient(ellipse 80% 60% at 50% -10%, rgba(123, 92, 255, 0.18) 0%, transparent 60%),
+          radial-gradient(ellipse 60% 40% at 80% 80%, rgba(52, 211, 153, 0.06) 0%, transparent 50%)
+        `,
         pointerEvents: 'none',
       }} />
 
-      <div className="container">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', alignItems: 'center' }}>
-          <div style={{ position: 'relative', zIndex: 1 }}>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px 16px',
-              background: 'rgba(0, 240, 255, 0.1)',
-              border: '1px solid rgba(0, 240, 255, 0.2)',
-              borderRadius: '100px',
-              fontSize: '12px',
-              fontWeight: 500,
-              color: '#00f0ff',
-              marginBottom: '24px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-            }}>
-              <span style={{
-                width: '6px',
-                height: '6px',
-                background: '#00f0ff',
-                borderRadius: '50%',
-                animation: 'pulse 2s infinite',
-              }} />
-              Open Source
-            </div>
+      {/* Grid pattern */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        backgroundImage: `
+          linear-gradient(rgba(123,92,255,0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(123,92,255,0.04) 1px, transparent 1px)
+        `,
+        backgroundSize: '60px 60px',
+        maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 70%)',
+        pointerEvents: 'none',
+      }} />
 
-            <h1 style={{
-              fontFamily: 'Space Grotesk, sans-serif',
-              fontSize: '56px',
-              fontWeight: 700,
-              marginBottom: '24px',
-              letterSpacing: '-0.02em',
-            }}>
-              Decode Your
-              <br />
-              <span className="gradient-text">Codebase</span>
-              <br />
-              Through Play
-            </h1>
+      <div className="container" style={{ width: '100%', position: 'relative', zIndex: 1 }}>
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+          <div className="badge animate-fade-up" style={{ animationDelay: '0ms', marginBottom: '24px' }}>
+            Open Source · Client-Side · AI-Powered
+          </div>
 
-            <p style={{
-              fontSize: '18px',
-              color: 'rgba(255,255,255,0.6)',
-              marginBottom: '40px',
-              maxWidth: '480px',
-              lineHeight: 1.7,
-            }}>
-              Upload your code archive. Get instant insights. Play games that make your team actually understand the codebase. Reduce cognitive debt without the debt.
-            </p>
+          <h1 className="animate-fade-up" style={{
+            fontFamily: 'Outfit, sans-serif',
+            fontSize: 'clamp(42px, 7vw, 80px)',
+            fontWeight: 800,
+            lineHeight: 1.05,
+            letterSpacing: '-0.03em',
+            marginBottom: '20px',
+            animationDelay: '80ms',
+          }}>
+            Decode Your
+            <br />
+            <span className="gradient-text">Codebase</span>
+            <br />
+            Through Play
+          </h1>
 
-            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-              <a href="#start" className="btn-primary">Start Analyzing</a>
-              <a href="https://github.com/yevgeniusr/unvibe" target="_blank" rel="noopener" className="btn-secondary">
-                View on GitHub
-              </a>
-            </div>
+          <p className="animate-fade-up" style={{
+            fontSize: '18px',
+            color: 'var(--text-secondary)',
+            maxWidth: '520px',
+            margin: '0 auto 40px',
+            lineHeight: 1.7,
+            animationDelay: '160ms',
+          }}>
+            Upload any project archive. Get instant insights. Turn your code into games your team will actually want to play.
+          </p>
 
-            <div style={{
-              display: 'flex',
-              gap: '48px',
-              marginTop: '60px',
-              paddingTop: '40px',
-              borderTop: '1px solid rgba(255,255,255,0.1)',
-            }}>
-              {[
-                { value: '100%', label: 'Client-side' },
-                { value: 'Any', label: 'Language' },
-                { value: '∞', label: 'Games' },
-              ].map(stat => (
-                <div key={stat.label}>
-                  <h3 style={{
-                    fontFamily: 'Space Grotesk, sans-serif',
-                    fontSize: '36px',
-                    fontWeight: 700,
-                    color: '#00f0ff',
-                    marginBottom: '4px',
-                  }}>
-                    {stat.value}
-                  </h3>
-                  <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                    {stat.label}
-                  </span>
+          <div className="animate-fade-up" style={{
+            display: 'flex',
+            gap: '32px',
+            justifyContent: 'center',
+            flexWrap: 'wrap',
+            animationDelay: '240ms',
+          }}>
+            {[
+              { icon: Shield, label: '100% Private', desc: 'Your code never leaves the browser' },
+              { icon: Zap, label: 'Any Language', desc: 'JS, Python, Rust, Go, anything' },
+              { icon: FileArchive, label: 'Games from Code', desc: 'Learn your codebase through play' },
+            ].map(({ icon: Icon, label, desc }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '36px', height: '36px',
+                  background: 'var(--accent-subtle)',
+                  border: '1px solid rgba(123,92,255,0.2)',
+                  borderRadius: '10px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <Icon size={16} color="var(--accent)" />
                 </div>
-              ))}
-            </div>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'Outfit' }}>{label}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Drop Zone — THE HERO */}
+        <div className="animate-fade-up" style={{ animationDelay: '320ms', maxWidth: '720px', margin: '0 auto' }}>
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={onDrop}
+            onClick={() => !loading && inputRef.current?.click()}
+            style={{
+              border: `2px dashed ${dragging ? 'var(--accent)' : loading ? 'var(--accent)' : 'var(--border)'}`,
+              borderRadius: 'var(--radius-xl)',
+              padding: '64px 48px',
+              textAlign: 'center',
+              background: dragging
+                ? 'rgba(123,92,255,0.06)'
+                : loading
+                  ? 'rgba(123,92,255,0.04)'
+                  : 'var(--bg-card)',
+              transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+              cursor: loading ? 'default' : 'pointer',
+              animation: loading ? 'pulse-glow 2s ease-in-out infinite' : dragging ? 'none' : 'none',
+              boxShadow: dragging ? '0 0 60px rgba(123,92,255,0.2)' : 'none',
+            }}
+          >
+            {loading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                <div style={{
+                  width: '64px', height: '64px',
+                  border: '2px solid rgba(123,92,255,0.2)',
+                  borderTopColor: 'var(--accent)',
+                  borderRadius: '50%',
+                  animation: 'spin-slow 0.8s linear infinite',
+                }} />
+                <p style={{ fontFamily: 'Outfit', fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Analyzing your codebase...
+                </p>
+                <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+                  Extracting files, measuring complexity, building games
+                </p>
+              </div>
+            ) : (
+              <>
+                <div style={{
+                  width: '72px', height: '72px',
+                  background: 'var(--accent-subtle)',
+                  border: '1px solid rgba(123,92,255,0.2)',
+                  borderRadius: '20px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  margin: '0 auto 24px',
+                  transition: 'transform 0.3s',
+                  transform: dragging ? 'scale(1.1)' : 'scale(1)',
+                }}>
+                  <Upload size={28} color="var(--accent)" />
+                </div>
+
+                <h3 style={{
+                  fontFamily: 'Outfit',
+                  fontSize: '22px',
+                  fontWeight: 700,
+                  marginBottom: '8px',
+                  color: dragging ? 'var(--accent)' : 'var(--text-primary)',
+                  transition: 'color 0.2s',
+                }}>
+                  {dragging ? 'Release to upload' : 'Drop your archive here'}
+                </h3>
+
+                <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '28px' }}>
+                  {dragging ? 'Let go and watch the magic happen' : 'or click to browse · zip, tar, gz supported'}
+                </p>
+
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  {['.zip', '.tar', '.gz', '.tar.gz'].map(ext => (
+                    <span key={ext} style={{
+                      padding: '5px 12px',
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontFamily: 'JetBrains Mono',
+                      color: 'var(--text-muted)',
+                    }}>
+                      {ext}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".zip,.tar,.gz,.tar.gz"
+              onChange={onChange}
+              style={{ display: 'none' }}
+            />
           </div>
 
-          <div style={{ position: 'relative' }}>
+          {error && (
             <div style={{
-              background: 'linear-gradient(135deg, rgba(0,240,255,0.1), rgba(168,85,247,0.1))',
-              borderRadius: '24px',
-              padding: '40px',
-              border: '1px solid rgba(255,255,255,0.1)',
+              marginTop: '16px',
+              padding: '14px 20px',
+              background: 'rgba(248,113,113,0.08)',
+              border: '1px solid rgba(248,113,113,0.2)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '14px',
+              color: 'var(--error)',
+              textAlign: 'left',
             }}>
-              <div style={{ fontFamily: 'monospace', fontSize: '14px', color: 'rgba(255,255,255,0.7)', marginBottom: '20px' }}>
-                {'// Your codebase, visualized'}
-              </div>
-              <pre style={{
-                background: 'rgba(0,0,0,0.3)',
-                borderRadius: '12px',
-                padding: '24px',
-                overflow: 'auto',
-                fontSize: '13px',
-                lineHeight: 1.8,
-              }}>
-                <code style={{ color: '#fff' }}>
-{`{
-  "totalFiles": 847,
-  "languages": [
-    "TypeScript: 62%",
-    "Python: 23%",
-    "Markdown: 8%"
-  ],
-  "cognitiveLoad": "medium",
-  "gamesGenerated": 24,
-  "teamProgress": {
-    "duels": 156,
-    "accuracy": 78%
-  }
-}`}
-                </code>
-              </pre>
+              {error}
             </div>
-          </div>
+          )}
+
+          <p style={{ marginTop: '20px', fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+            <Shield size={13} />
+            Your code never leaves this browser — analysis runs 100% client-side
+            <span style={{ margin: '0 4px' }}>·</span>
+            <a href="https://github.com/nanachichan3/unvibe" target="_blank" rel="noopener" style={{ color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Github size={13} /> Open Source
+            </a>
+          </p>
         </div>
       </div>
 
       <style>{`
-        @media (max-width: 1024px) {
-          section > div > div {
-            grid-template-columns: 1fr !important;
-            gap: 48px !important;
-          }
-        }
-        @media (max-width: 640px) {
-          h1 { font-size: 36px !important; }
+        @keyframes spin-slow {
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </section>

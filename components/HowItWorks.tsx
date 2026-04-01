@@ -1,82 +1,94 @@
 'use client';
 
+import { Upload, BarChart3, Gamepad2, Sparkles } from 'lucide-react';
+
 const steps = [
-  {
-    num: '01',
-    title: 'Export Your Code',
-    description: 'Create a zip archive of any project folder. Include as much or as little as you want — from a single module to your entire monorepo.',
-  },
-  {
-    num: '02',
-    title: 'Drop It Here',
-    description: 'Upload your archive. Parsing happens instantly in your browser — nothing is uploaded to any server for core analysis.',
-  },
-  {
-    num: '03',
-    title: 'Explore & Play',
-    description: 'See metrics, complexity signals, and language breakdown. Then jump into games built from your actual code.',
-  },
-  {
-    num: '04',
-    title: 'Level Up with AI',
-    description: 'Add your own OpenAI or Gemini key to unlock deeper insights, cognitive debt analysis, and unlimited AI-generated questions.',
-  },
+  { icon: Upload, num: '01', title: 'Export', desc: 'Zip any project folder' },
+  { icon: BarChart3, num: '02', title: 'Upload', desc: 'Drop it — parsing is instant' },
+  { icon: Gamepad2, num: '03', title: 'Play', desc: 'Games built from your code' },
+  { icon: Sparkles, num: '04', title: 'Level Up', desc: 'Add AI key for deeper insights' },
 ];
 
 export default function HowItWorks() {
   return (
-    <section id="how" style={{ padding: '120px 0' }}>
+    <section id="how" className="section" style={{ background: 'var(--bg-secondary)' }}>
       <div className="container">
-        <div style={{ textAlign: 'center', maxWidth: '600px', margin: '0 auto 64px' }}>
-          <div style={{
-            fontSize: '12px',
-            fontWeight: 600,
-            color: '#00f0ff',
-            textTransform: 'uppercase',
-            letterSpacing: '0.2em',
-            marginBottom: '16px',
-          }}>
-            How it Works
-          </div>
+        <div style={{ textAlign: 'center', marginBottom: '56px' }}>
           <h2 style={{
-            fontFamily: 'Space Grotesk, sans-serif',
-            fontSize: '42px',
+            fontFamily: 'Outfit',
+            fontSize: 'clamp(28px, 4vw, 40px)',
             fontWeight: 700,
+            letterSpacing: '-0.02em',
           }}>
-            Four Steps to Clarity
+            Four steps to clarity
           </h2>
         </div>
 
-        <div className="grid-2">
-          {steps.map((step, i) => (
-            <div key={i} style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: '2px',
+          background: 'var(--border-subtle)',
+          borderRadius: 'var(--radius-lg)',
+          overflow: 'hidden',
+          border: '1px solid var(--border-subtle)',
+        }}>
+          {steps.map(({ icon: Icon, num, title, desc }, i) => (
+            <div
+              key={i}
+              className="animate-fade-up"
+              style={{
+                padding: '40px 32px',
+                background: 'var(--bg-card)',
+                animationDelay: `${i * 100}ms`,
+                textAlign: 'center',
+              }}
+            >
               <div style={{
-                fontFamily: 'Space Grotesk, sans-serif',
-                fontSize: '48px',
-                fontWeight: 700,
-                color: 'rgba(0, 240, 255, 0.3)',
-                lineHeight: 1,
-                minWidth: '60px',
+                fontFamily: 'JetBrains Mono',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: 'var(--accent)',
+                letterSpacing: '0.1em',
+                marginBottom: '20px',
               }}>
-                {step.num}
+                {num}
               </div>
-              <div>
-                <h3 style={{
-                  fontFamily: 'Space Grotesk, sans-serif',
-                  fontSize: '20px',
-                  fontWeight: 600,
-                  marginBottom: '8px',
-                }}>
-                  {step.title}
-                </h3>
-                <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>
-                  {step.description}
-                </p>
+              <div className="icon-box" style={{
+                width: '56px', height: '56px',
+                margin: '0 auto 20px',
+                background: 'var(--accent-subtle)',
+              }}>
+                <Icon size={24} color="var(--accent)" strokeWidth={1.75} />
               </div>
+              <h3 style={{
+                fontFamily: 'Outfit',
+                fontSize: '16px',
+                fontWeight: 600,
+                marginBottom: '6px',
+              }}>
+                {title}
+              </h3>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                {desc}
+              </p>
             </div>
           ))}
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .container > div:last-child > div:first-child {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .container > div:last-child > div:first-child {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }

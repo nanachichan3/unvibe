@@ -1,98 +1,97 @@
 'use client';
 
+import { Shield, Gamepad2, Brain, Lock, Globe, Users } from 'lucide-react';
+
 const features = [
   {
-    icon: '📊',
+    icon: Brain,
     title: 'Instant Analytics',
-    description: 'Drop your code, get metrics in seconds. File counts, language distribution, complexity signals — all client-side.',
+    description: 'Drop your code, get metrics in seconds. Files, languages, complexity — all client-side, no uploads.',
   },
   {
-    icon: '🎮',
+    icon: Gamepad2,
     title: 'Code Games',
-    description: 'Turn your actual codebase into quizzes. Guess the file, component duels, dependency paths. Learning your code has never been fun.',
+    description: 'Turn your actual codebase into quizzes. Guess the file, component duels, dependency paths.',
   },
   {
-    icon: '🤖',
+    icon: Shield,
     title: 'AI-Powered Insights',
-    description: 'Bring your own API key. Get cognitive debt analysis, architecture insights, and AI-generated questions tailored to your code.',
+    description: 'Bring your own API key. Get cognitive debt analysis and AI-generated questions tailored to your code.',
   },
   {
-    icon: '🔒',
+    icon: Lock,
     title: '100% Private',
-    description: 'Your code never leaves your browser for core analytics. No uploads, no servers, no logging. Optional AI only when you trigger it.',
+    description: 'Your code never leaves your browser. No uploads, no servers, no logging.',
   },
   {
-    icon: '🌍',
+    icon: Globe,
     title: 'Any Language',
-    description: 'JavaScript, Python, Rust, Go, or COBOL — if it\'s in your archive, we analyze it. No language-specific setup required.',
+    description: 'JavaScript, Python, Rust, Go, or COBOL — if it\'s in your archive, we analyze it.',
   },
   {
-    icon: '👥',
+    icon: Users,
     title: 'Team Building',
-    description: 'Games work for individuals or teams. Track progress, build shared understanding, reduce onboarding time.',
+    description: 'Games work solo or with your team. Track progress, build shared understanding.',
   },
 ];
 
 export default function Features() {
   return (
-    <section id="features" style={{
-      padding: '120px 0',
-      background: 'linear-gradient(180deg, transparent 0%, rgba(168,85,247,0.03) 50%, transparent 100%)',
+    <section id="features" className="section" style={{
+      background: 'linear-gradient(180deg, transparent 0%, rgba(123,92,255,0.03) 50%, transparent 100%)',
     }}>
       <div className="container">
-        <div style={{ textAlign: 'center', maxWidth: '600px', margin: '0 auto 64px' }}>
-          <div style={{
-            fontSize: '12px',
-            fontWeight: 600,
-            color: '#ff00ff',
-            textTransform: 'uppercase',
-            letterSpacing: '0.2em',
-            marginBottom: '16px',
-          }}>
-            Features
+        <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+          <div className="badge" style={{ marginBottom: '20px', display: 'inline-flex' }}>
+            Why Unvibe
           </div>
           <h2 style={{
-            fontFamily: 'Space Grotesk, sans-serif',
-            fontSize: '42px',
+            fontFamily: 'Outfit',
+            fontSize: 'clamp(32px, 5vw, 48px)',
             fontWeight: 700,
             marginBottom: '16px',
+            letterSpacing: '-0.02em',
           }}>
-            Why Unvibe?
+            Everything you need to
+            <br />
+            <span className="gradient-text">understand your code</span>
           </h2>
-          <p style={{ fontSize: '16px', color: 'rgba(255,255,255,0.6)' }}>
-            Transform code understanding from a chore into a game. Built for developers who ship.
+          <p style={{ fontSize: '17px', color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto' }}>
+            No installs, no signups, no data collection. Just upload and play.
           </p>
         </div>
 
         <div className="grid-3">
-          {features.map((feature, i) => (
-            <div key={i} className="card" style={{ cursor: 'default' }}>
-              <div style={{
-                width: '56px',
-                height: '56px',
-                background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.15), rgba(168, 85, 247, 0.15))',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '24px',
-                marginBottom: '20px',
-              }}>
-                {feature.icon}
+          {features.map((feature, i) => {
+            const Icon = feature.icon;
+            return (
+              <div
+                key={i}
+                className="card animate-fade-up"
+                style={{
+                  padding: '32px',
+                  animationDelay: `${i * 80}ms`,
+                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                }}
+              >
+                <div className="icon-box" style={{ marginBottom: '20px' }}>
+                  <Icon size={22} color="var(--accent)" strokeWidth={1.75} />
+                </div>
+                <h3 style={{
+                  fontFamily: 'Outfit',
+                  fontSize: '18px',
+                  fontWeight: 600,
+                  marginBottom: '10px',
+                  letterSpacing: '-0.01em',
+                }}>
+                  {feature.title}
+                </h3>
+                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.65 }}>
+                  {feature.description}
+                </p>
               </div>
-              <h3 style={{
-                fontFamily: 'Space Grotesk, sans-serif',
-                fontSize: '18px',
-                fontWeight: 600,
-                marginBottom: '12px',
-              }}>
-                {feature.title}
-              </h3>
-              <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>
-                {feature.description}
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>
