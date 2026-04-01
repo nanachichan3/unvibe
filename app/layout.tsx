@@ -28,7 +28,6 @@ export const metadata: Metadata = {
   description: 'Turn your code into games. Reduce cognitive debt through play.',
   icons: {
     icon: '/favicon.svg',
-    apple: '/apple-touch-icon.png',
   },
 };
 
@@ -40,11 +39,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           httpEquiv="Content-Security-Policy"
           content={
             "default-src 'self'; " +
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+            "script-src 'self' 'unsafe-inline'; " +
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
             "font-src 'self' https://fonts.gstatic.com; " +
-            "img-src 'self' data:; " +
-            "connect-src 'self' https://api.openai.com https://generativelanguage.googleapis.com;"
+            "img-src 'self' data: blob:; " +
+            "connect-src 'self' https://api.openai.com https://generativelanguage.googleapis.com; " +
+            "frame-ancestors 'none';"
           }
         />
       </head>

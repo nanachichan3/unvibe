@@ -180,7 +180,7 @@ export default function UploadZone({ onDataLoaded }: UploadZoneProps) {
         }}>
           <FileArchive size={14} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
           Your data never leaves this browser — analysis runs 100% client-side.
-          Open source on <a href="https://github.com/yevgeniusr/unvibe" target="_blank" rel="noopener" style={{ color: '#00f0ff' }}>GitHub</a>
+          Open source on <a href="https://github.com/nanachichan3/unvibe" target="_blank" rel="noopener" style={{ color: '#00f0ff' }}>GitHub</a>
         </p>
       </div>
 
