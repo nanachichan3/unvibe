@@ -52,7 +52,7 @@ export interface GameSession {
   correctAnswers: number;
   streak: number;
   highStreak: number;
-  questionsAnswered: string[];
+  questionsAnswered: Array<{ questionId: string; correct: boolean }>;
 }
 
 export interface AIGameConfig {

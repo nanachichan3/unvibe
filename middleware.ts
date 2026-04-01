@@ -15,7 +15,7 @@ export function middleware(request: NextRequest) {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob:",
-      "connect-src 'self' https://api.openai.com https://generativelanguage.googleapis.com",
+      "connect-src 'self' https://api.openai.com https://generativelanguage.googleapis.com https://api.github.com https://raw.githubusercontent.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
