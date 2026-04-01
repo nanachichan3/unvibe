@@ -1,36 +1,19 @@
 # syntax=docker/dockerfile:1
-# Unvibe - Next.js 14 production image for Coolify
+# Simple Next.js 14 build for Coolify
 
-# --- Dependencies ---
-FROM node:20-alpine AS deps
-RUN apk add --no-cache libc6-compat
+FROM node:20-alpine
 WORKDIR /app
-COPY package.json pnpm-lock.yaml* ./
 
-RUN corepack enable pnpm && pnpm install
-
-# --- Builder ---
-FROM node:20-alpine AS builder
-RUN corepack enable pnpm
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+# Copy files
+COPY package*.json ./
+RUN npm ci
 COPY . .
-ENV NEXT_TELEMETRY_DISABLED=1
-RUN pnpm build
 
-# --- Runner ---
-FROM node:20-alpine AS runner
-WORKDIR /app
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# Build
+RUN npm run build
 
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-USER nextjs
+# Expose port
 EXPOSE 3014
-ENV PORT=3014
-ENV HOSTNAME="0.0.0.0"
-CMD ["node", "server.js"]
+
+# Start
+CMD ["npm", "start"]
