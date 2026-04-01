@@ -1,0 +1,7 @@
+[phases.setup]
+nix_channel = "nixpkgs-unstable"
+
+[phases.build]
+commands = ["npm install", "npm run build"]
+[start]
+command = "npm start"
