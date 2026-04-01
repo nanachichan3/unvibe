@@ -8,10 +8,17 @@ import { buildDirectoryTree } from '@/lib/parser';
 import { escapeHtml } from '@/lib/sanitize';
 import Games from './Games';
 
+interface GitHubSource {
+  owner: string;
+  repo: string;
+  token?: string;
+}
+
 interface DashboardProps {
   files: FileInfo[];
   metrics: ComplexityMetrics;
   questions: GameQuestion[];
+  gitHubData?: GitHubSource;
 }
 
 const LOAD_COLORS = {
@@ -23,7 +30,7 @@ const LOAD_COLORS = {
 
 const LANG_COLORS = ['#7B5CFF', '#5C8FFF', '#34D399', '#FBBF24', '#F97316', '#F87171', '#EC4899', '#8B5CF6'];
 
-export default function Dashboard({ files, metrics, questions }: DashboardProps) {
+export default function Dashboard({ files, metrics, questions, gitHubData }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'files' | 'games'>('overview');
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set(['root']));
   const [showAIConfig, setShowAIConfig] = useState(false);
@@ -53,13 +60,33 @@ export default function Dashboard({ files, metrics, questions }: DashboardProps)
     if (!aiConfig.apiKey) return;
     setAiLoading(true);
     try {
-      const { generateAIQuestions, analyzeWithAI } = await import('@/lib/ai');
+      const { generateAIQuestions, analyzeWithAI, generateFunctionAgeQuestions } = await import('@/lib/ai');
+
+      // Run base analysis + question generation
       const [analysis, newQuestions] = await Promise.all([
         analyzeWithAI(files, metrics, { apiKey: aiConfig.apiKey, provider: aiConfig.provider }),
-        generateAIQuestions(files, metrics, { apiKey: aiConfig.apiKey, provider: aiConfig.provider }),
+        generateAIQuestions(files, metrics, { apiKey: aiConfig.apiKey, provider: aiConfig.provider }, gitHubData),
       ]);
+
       setAiInsights(analysis);
-      setExtraQuestions(newQuestions);
+
+      // If GitHub source, also get function-age questions from real commit data
+      if (gitHubData) {
+        try {
+          const fnAgeQuestions = await generateFunctionAgeQuestions(
+            gitHubData.owner,
+            gitHubData.repo,
+            files,
+            aiConfig.apiKey,
+            gitHubData.token
+          );
+          setExtraQuestions([...newQuestions, ...fnAgeQuestions]);
+        } catch {
+          setExtraQuestions(newQuestions);
+        }
+      } else {
+        setExtraQuestions(newQuestions);
+      }
     } catch (err) {
       console.error('AI analysis failed:', err);
     }

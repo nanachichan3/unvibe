@@ -8,6 +8,7 @@ import Features from '@/components/Features';
 import HowItWorks from '@/components/HowItWorks';
 import Footer from '@/components/Footer';
 import type { FileInfo, ComplexityMetrics, GameQuestion } from '@/lib/types';
+import { calculateMetrics, generateStaticQuestions } from '@/lib/parser';
 
 const Dashboard = dynamic(() => import('@/components/Dashboard'), {
   loading: () => (
@@ -25,16 +26,28 @@ const Dashboard = dynamic(() => import('@/components/Dashboard'), {
   ),
 });
 
+interface GitHubSource {
+  owner: string;
+  repo: string;
+  token?: string;
+}
+
 export default function Home() {
   const [hasData, setHasData] = useState(false);
   const [data, setData] = useState<{
     files: FileInfo[];
     metrics: ComplexityMetrics;
     questions: GameQuestion[];
+    gitHubData?: GitHubSource;
   } | null>(null);
 
-  const handleDataLoaded = (files: FileInfo[], metrics: ComplexityMetrics, questions: GameQuestion[]) => {
-    setData({ files, metrics, questions });
+  const handleDataLoaded = (
+    files: FileInfo[],
+    metrics: ComplexityMetrics,
+    questions: GameQuestion[],
+    gitHubData?: GitHubSource
+  ) => {
+    setData({ files, metrics, questions, gitHubData });
     setHasData(true);
     setTimeout(() => {
       document.getElementById('dashboard')?.scrollIntoView({ behavior: 'smooth' });
@@ -45,12 +58,19 @@ export default function Home() {
     <main>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       <Navbar />
-      <Hero onDataLoaded={handleDataLoaded} />
+      <Hero
+        onDataLoaded={(files, metrics, questions, gitHubData) => handleDataLoaded(files, metrics, questions, gitHubData)}
+      />
       <Features />
       <HowItWorks />
       {data && (
         <div id="dashboard">
-          <Dashboard files={data.files} metrics={data.metrics} questions={data.questions} />
+          <Dashboard
+            files={data.files}
+            metrics={data.metrics}
+            questions={data.questions}
+            gitHubData={data.gitHubData}
+          />
         </div>
       )}
       <Footer />

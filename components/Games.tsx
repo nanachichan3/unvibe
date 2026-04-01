@@ -183,6 +183,43 @@ export default function Games({ questions }: GamesProps) {
           {q.question}
         </h3>
 
+        {/* Code snippet for function-age and code-author */}
+        {q.codeSnippet && (q.type === 'function-age' || q.type === 'code-author') && (
+          <div style={{
+            marginBottom: '24px',
+            borderRadius: 'var(--radius-md)',
+            overflow: 'hidden',
+            border: '1px solid var(--border)',
+          }}>
+            <div style={{
+              padding: '10px 16px',
+              background: 'var(--bg-secondary)',
+              borderBottom: '1px solid var(--border)',
+              fontSize: '11px',
+              fontFamily: 'var(--font-jetbrains)',
+              color: 'var(--text-muted)',
+              display: 'flex',
+              justifyContent: 'space-between',
+            }}>
+              <span>Code snippet</span>
+              <span style={{ color: 'var(--accent)' }}>{q.type === 'function-age' ? 'Last modified?' : 'Who wrote this?'}</span>
+            </div>
+            <pre style={{
+              padding: '16px',
+              background: 'var(--bg-primary)',
+              margin: 0,
+              fontSize: '12px',
+              fontFamily: 'var(--font-jetbrains)',
+              color: 'var(--text-secondary)',
+              overflow: 'auto',
+              maxHeight: '200px',
+              lineHeight: 1.6,
+            }}>
+              <code>{q.codeSnippet}</code>
+            </pre>
+          </div>
+        )}
+
         {/* Options */}
         <div style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
           {q.options.map((option, i) => {

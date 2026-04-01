@@ -38,12 +38,13 @@ export interface ComplexityMetrics {
 
 export interface GameQuestion {
   id: string;
-  type: 'guess-file' | 'component-duel' | 'dependency-path' | 'memory-match';
+  type: 'guess-file' | 'component-duel' | 'dependency-path' | 'memory-match' | 'function-age' | 'code-author';
   question: string;
   options: string[];
   answer: string;
   explanation: string;
   difficulty: 'easy' | 'medium' | 'hard';
+  codeSnippet?: string;
 }
 
 export interface GameSession {
