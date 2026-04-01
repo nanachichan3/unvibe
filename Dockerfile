@@ -1,20 +1,22 @@
 # syntax=docker/dockerfile:1
-# Unvibe - Next.js production image for Coolify
+# Unvibe - Next.js 14 production image for Coolify
 
 # --- Dependencies ---
 FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm ci
+COPY package.json pnpm-lock.yaml* ./
+
+RUN corepack enable pnpm && pnpm install
 
 # --- Builder ---
 FROM node:20-alpine AS builder
+RUN corepack enable pnpm
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm run build
+RUN pnpm build
 
 # --- Runner ---
 FROM node:20-alpine AS runner
