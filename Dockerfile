@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Simple Next.js 14 build for Coolify
+# Unvibe - Next.js 14 production image for Coolify
 
 FROM node:20-alpine
 WORKDIR /app
@@ -7,13 +7,13 @@ WORKDIR /app
 # Copy files
 COPY package*.json ./
 RUN npm ci
-COPY . .
 
-# Build
+# Copy source and build
+COPY . .
 RUN npm run build
 
 # Expose port
 EXPOSE 3014
 
-# Start
-CMD ["npm", "start"]
+# Start standalone server
+CMD ["node", ".next/standalone/server.js"]
