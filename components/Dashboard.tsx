@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 import { Files, Code, Layers, AlertTriangle, TrendingUp, FolderTree, ChevronDown, ChevronRight, Bot, RefreshCw } from 'lucide-react';
 import type { FileInfo, ComplexityMetrics, GameQuestion } from '@/lib/types';
 import { buildDirectoryTree } from '@/lib/parser';
+import { escapeHtml } from '@/lib/sanitize';
 import Games from './Games';
 
 interface DashboardProps {
@@ -26,7 +27,10 @@ export default function Dashboard({ files, metrics, questions }: DashboardProps)
   const [activeTab, setActiveTab] = useState<'overview' | 'files' | 'games'>('overview');
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set(['root']));
   const [showAIConfig, setShowAIConfig] = useState(false);
-  const [aiConfig, setAiConfig] = useState<{ apiKey: string; provider: 'gemini' | 'openai' }>({ apiKey: '', provider: 'gemini' });
+  const [aiConfig, setAiConfig] = useState<{ apiKey: string; provider: 'gemini' | 'openai' }>({
+    apiKey: '',
+    provider: 'gemini',
+  });
   const [aiLoading, setAiLoading] = useState(false);
   const [aiInsights, setAiInsights] = useState<{ insights: string[]; cognitiveDebtSignals: string[] } | null>(null);
   const [extraQuestions, setExtraQuestions] = useState<GameQuestion[]>([]);
@@ -224,7 +228,7 @@ export default function Dashboard({ files, metrics, questions }: DashboardProps)
                   }}>
                     <span style={{ color: 'var(--text-muted)', fontSize: '12px', fontFamily: 'JetBrains Mono', minWidth: '20px' }}>{i + 1}</span>
                     <span style={{ flex: 1, fontSize: '13px', fontFamily: 'JetBrains Mono', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {file.path}
+                      {escapeHtml(file.path)}
                     </span>
                     <span style={{ fontSize: '12px', fontFamily: 'JetBrains Mono', color: 'var(--accent)' }}>
                       {file.lines.toLocaleString()} lines
@@ -404,10 +408,10 @@ function renderTree(node: ReturnType<typeof buildDirectoryTree>, expanded: Set<s
               <span style={{ width: '13px' }} />
             )}
             <span style={{ fontSize: '13px' }}>{child.type === 'directory' ? '📁' : '📄'}</span>
-            <span>{child.name}</span>
+            <span>{escapeHtml(child.name)}</span>
             {child.fileInfo && (
               <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-muted)' }}>
-                {child.fileInfo.lines} lines
+                {child.fileInfo.lines.toLocaleString()} lines
               </span>
             )}
           </div>

@@ -13,7 +13,7 @@ const STORAGE_KEY = 'unvibe_game_session';
 export default function Games({ questions }: GamesProps) {
   const [session, setSession] = useState<GameSession>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved = sessionStorage.getItem(STORAGE_KEY);
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -32,7 +32,7 @@ export default function Games({ questions }: GamesProps) {
   const [duelScore, setDuelScore] = useState({ player: 0, ai: 0 });
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
   }, [session]);
 
   const q = questions[currentQ];
