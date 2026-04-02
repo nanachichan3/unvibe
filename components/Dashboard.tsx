@@ -56,6 +56,8 @@ export default function Dashboard({ files, metrics, questions, gitHubData }: Das
   const [selectedGameTypes, setSelectedGameTypes] = useState<Set<string>>(
     new Set(GAME_TYPES.map(g => g.id))
   );
+  // Track active solo game — null means "mixed mode"
+  const [soloGame, setSoloGame] = useState<string | null>(null);
 
   // Load API key from localStorage on mount
   useEffect(() => {
@@ -529,7 +531,12 @@ export default function Dashboard({ files, metrics, questions, gitHubData }: Das
               </div>
             </div>
 
-            <Games questions={allQuestions} />
+            <Games
+              questions={allQuestions}
+              GAME_TYPES={GAME_TYPES}
+              soloGame={soloGame}
+              setSoloGame={setSoloGame}
+            />
           </>
         )}
       </div>

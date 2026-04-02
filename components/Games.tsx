@@ -6,6 +6,9 @@ import type { GameQuestion, GameSession } from '@/lib/types';
 
 interface GamesProps {
   questions: GameQuestion[];
+  GAME_TYPES: ReadonlyArray<{ id: string; label: string; desc: string }>;
+  soloGame: string | null;
+  setSoloGame: (id: string | null) => void;
 }
 
 const STORAGE_KEY = 'unvibe_game_session';
@@ -18,7 +21,7 @@ const defaultSession: GameSession = {
   questionsAnswered: [],
 };
 
-export default function Games({ questions }: GamesProps) {
+export default function Games({ questions, GAME_TYPES, soloGame, setSoloGame }: GamesProps) {
   // Always initialize with default state for SSR consistency
   const [session, setSession] = useState<GameSession>(defaultSession);
   const [currentQ, setCurrentQ] = useState(0);
@@ -27,6 +30,11 @@ export default function Games({ questions }: GamesProps) {
   const [gameMode, setGameMode] = useState<'quiz' | 'duel'>('quiz');
   const [duelScore, setDuelScore] = useState({ player: 0, ai: 0 });
   const [hydrated, setHydrated] = useState(false);
+
+  // Filter to active questions based on solo game mode
+  const activeQuestions = soloGame
+    ? questions.filter(q => q.type === soloGame)
+    : questions;
 
   // Load from sessionStorage only after mount (client-only)
   useEffect(() => {
@@ -40,7 +48,7 @@ export default function Games({ questions }: GamesProps) {
           correctAnswers: parsed.correctAnswers ?? 0,
           streak: 0,
           highStreak: parsed.highStreak ?? 0,
-          questionsAnswered: [], // Reset on load for fresh session
+          questionsAnswered: [],
         };
         setSession(normalized);
       }
@@ -50,6 +58,13 @@ export default function Games({ questions }: GamesProps) {
     setHydrated(true);
   }, []);
 
+  // Reset current question index when soloGame changes
+  useEffect(() => {
+    setCurrentQ(0);
+    setSelected(null);
+    setShowResult(false);
+  }, [soloGame]);
+
   // Persist to sessionStorage on change
   useEffect(() => {
     if (hydrated) {
@@ -57,7 +72,39 @@ export default function Games({ questions }: GamesProps) {
     }
   }, [session, hydrated]);
 
-  const q = questions[currentQ];
+  if (!hydrated) {
+    return (
+      <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-secondary)' }}>
+        <div style={{
+          width: '36px', height: '36px',
+          border: '2px solid rgba(123,92,255,0.2)',
+          borderTopColor: '#7B5CFF',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+          margin: '0 auto 16px',
+        }} />
+        <p>Loading games...</p>
+      </div>
+    );
+  }
+
+  if (activeQuestions.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-secondary)' }}>
+        <p style={{ fontSize: '18px', marginBottom: '8px' }}>No questions in this game yet.</p>
+        <p style={{ fontSize: '14px' }}>Try switching to Mixed mode or run AI Analysis.</p>
+        <button
+          onClick={() => setSoloGame(null)}
+          className="btn-primary"
+          style={{ marginTop: '20px', padding: '12px 24px', fontSize: '14px' }}
+        >
+          🎲 Back to Mixed Mode
+        </button>
+      </div>
+    );
+  }
+
+  const q = activeQuestions[currentQ % activeQuestions.length];
   const answered = selected !== null;
   const correct = selected === q?.answer;
   const accuracy = session.totalQuestions > 0
@@ -99,24 +146,8 @@ export default function Games({ questions }: GamesProps) {
 
   const nextQuestion = () => {
     resetGame();
-    setCurrentQ(prev => (prev + 1) % questions.length);
+    setCurrentQ(prev => (prev + 1) % activeQuestions.length);
   };
-
-  if (!hydrated) {
-    return (
-      <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-secondary)' }}>
-        <div style={{
-          width: '36px', height: '36px',
-          border: '2px solid rgba(123,92,255,0.2)',
-          borderTopColor: '#7B5CFF',
-          borderRadius: '50%',
-          animation: 'spin 0.8s linear infinite',
-          margin: '0 auto 16px',
-        }} />
-        <p>Loading games...</p>
-      </div>
-    );
-  }
 
   return (
     <div style={{ padding: '80px 0' }}>
@@ -131,9 +162,50 @@ export default function Games({ questions }: GamesProps) {
           }}>
             <span className="gradient-text">Quiz Games</span>
           </h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '16px' }}>
-            {questions.length} questions generated from your codebase
+          <p style={{ color: 'var(--text-secondary)', fontSize: '16px', marginBottom: '20px' }}>
+            {activeQuestions.length} questions {soloGame ? `in ${GAME_TYPES.find(g => g.id === soloGame)?.label ?? soloGame}` : 'from your codebase'}
           </p>
+
+          {/* Mode selector: Mixed vs Solo */}
+          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setSoloGame(null)}
+              style={{
+                padding: '8px 18px',
+                background: soloGame === null ? 'var(--accent-subtle)' : 'var(--bg-elevated)',
+                border: `1px solid ${soloGame === null ? 'rgba(123,92,255,0.4)' : 'var(--border)'}`,
+                borderRadius: '100px',
+                color: soloGame === null ? 'var(--accent)' : 'var(--text-muted)',
+                cursor: 'pointer',
+                fontFamily: 'var(--font-outfit)',
+                fontWeight: 600,
+                fontSize: '13px',
+                transition: 'all 0.2s',
+              }}
+            >
+              🎲 Mixed
+            </button>
+            {GAME_TYPES.filter(g => activeQuestions.some(q => q.type === g.id)).map(game => (
+              <button
+                key={game.id}
+                onClick={() => setSoloGame(game.id === soloGame ? null : game.id)}
+                style={{
+                  padding: '8px 18px',
+                  background: soloGame === game.id ? 'var(--accent-subtle)' : 'var(--bg-elevated)',
+                  border: `1px solid ${soloGame === game.id ? 'rgba(123,92,255,0.4)' : 'var(--border)'}`,
+                  borderRadius: '100px',
+                  color: soloGame === game.id ? 'var(--accent)' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-outfit)',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  transition: 'all 0.2s',
+                }}
+              >
+                {game.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Stats */}
@@ -385,7 +457,7 @@ export default function Games({ questions }: GamesProps) {
 
           {/* Progress */}
           <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            {questions.map((_, i) => (
+            {activeQuestions.map((_, i) => (
               <div
                 key={i}
                 onClick={() => { setCurrentQ(i); setSelected(null); setShowResult(false); }}
@@ -394,8 +466,8 @@ export default function Games({ questions }: GamesProps) {
                   borderRadius: '50%',
                   background: i === currentQ
                     ? 'var(--accent)'
-                    : session.questionsAnswered.find(q => q.questionId === questions[i].id)
-                      ? (session.questionsAnswered.find(q => q.questionId === questions[i].id)?.correct ? '#34D399' : '#F87171')
+                    : session.questionsAnswered.find(q => q.questionId === activeQuestions[i].id)
+                      ? (session.questionsAnswered.find(q => q.questionId === activeQuestions[i].id)?.correct ? '#34D399' : '#F87171')
                       : 'var(--border)',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
