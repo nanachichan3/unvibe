@@ -173,7 +173,7 @@ async function analyzeOpenAI(prompt: string, apiKey: string) {
       model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.5,
-      max_tokens: 1500,
+      max_tokens: 3000,
     }),
   });
 
@@ -190,7 +190,7 @@ async function analyzeGemini(prompt: string, apiKey: string) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.5, maxOutputTokens: 1500 },
+        generationConfig: { temperature: 0.5, maxOutputTokens: 3000 },
       }),
     }
   );
