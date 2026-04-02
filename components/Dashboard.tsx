@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Files, Code, Layers, AlertTriangle, TrendingUp, FolderTree, ChevronDown, ChevronRight, Bot, RefreshCw, AlertCircle } from 'lucide-react';
 import type { FileInfo, ComplexityMetrics, GameQuestion } from '@/lib/types';
@@ -52,6 +52,10 @@ export default function Dashboard({ files, metrics, questions, gitHubData }: Das
   // GitHub round data for infinite game generation
   const [gitHubRoundData, setGitHubRoundData] = useState<GitHubRoundData | null>(null);
   const [gitHubLoading, setGitHubLoading] = useState(false);
+
+  // Memoize files so Games useMemo is stable
+  const stableFiles = useMemo(() => files, [files]);
+  const stableMetrics = useMemo(() => metrics, [metrics]);
 
   // Load API key from localStorage on mount
   useEffect(() => {
@@ -564,8 +568,8 @@ export default function Dashboard({ files, metrics, questions, gitHubData }: Das
             </div>
 
             <Games
-              files={files}
-              metrics={metrics}
+              files={stableFiles}
+              metrics={stableMetrics}
               gitHubData={gitHubRoundData ?? undefined}
               soloGame={soloGame}
               setSoloGame={setSoloGame}

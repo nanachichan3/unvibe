@@ -197,12 +197,10 @@ export default function Games({ files, metrics, gitHubData, soloGame, setSoloGam
     setTimelineGuess(null);
   }, [gameType]);
 
-  // Generate question for current round
+  // Generate question for current round — only when data is ready
   const currentQ = useMemo<GameQuestion | null>(() => {
-    if (!hydrated) return null;
-    const seedBase = 42; // Could be repo-hashed for determinism
-    const q = generateRoundQuestion(roundKey, gameType as 'guess-file' | 'function-age' | 'dependency-path' | 'component-duel' | 'complexity-race' | 'commit-message' | 'code-author', files, metrics, gitHubData, seedBase, difficulty);
-    return q;
+    if (!hydrated || !files || files.length === 0) return null;
+    return generateRoundQuestion(roundKey, gameType as 'guess-file' | 'function-age' | 'dependency-path' | 'component-duel' | 'complexity-race' | 'commit-message' | 'code-author', files, metrics, gitHubData, 42, difficulty);
   }, [roundKey, gameType, files, metrics, gitHubData, difficulty, hydrated]);
 
   const avgPts = score.roundsPlayed > 0 ? Math.round(score.totalPoints / score.roundsPlayed) : 0;
