@@ -34,20 +34,6 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${outfit.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}>
-      <head>
-        <meta
-          httpEquiv="Content-Security-Policy"
-          content={
-            "default-src 'self'; " +
-            "script-src 'self' 'unsafe-inline'; " +
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-            "font-src 'self' https://fonts.gstatic.com; " +
-            "img-src 'self' data: blob:; " +
-            "connect-src 'self' https://api.openai.com https://generativelanguage.googleapis.com; " +
-            "frame-ancestors 'none';"
-          }
-        />
-      </head>
       <body>{children}</body>
     </html>
   );
