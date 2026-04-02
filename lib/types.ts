@@ -45,6 +45,14 @@ export interface GameQuestion {
   explanation: string;
   difficulty: 'easy' | 'medium' | 'hard';
   codeSnippet?: string;
+  /** For timeline-based games (function-age, code-author): the correct date as ISO string */
+  proximateAnswer?: string;
+  /** For timeline-based games: the repo's date range { start, end } */
+  dateRange?: { start: string; end: string };
+  /** For timeline-based games: sparkline data of commit activity */
+  sparklineData?: { date: string; count: number }[];
+  /** Author for code-author game */
+  authorName?: string;
 }
 
 export interface GameSession {

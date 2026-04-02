@@ -531,3 +531,475 @@ function shuffleArray<T>(array: T[]): T[] {
 function getRandomItems<T>(array: T[], count: number): T[] {
   return shuffleArray(array).slice(0, count);
 }
+
+// ============================================================
+// Infinite Round Question Generator
+// Uses seeded PRNG so same seed always produces same question
+// ============================================================
+
+/** mulberry32 seeded PRNG — returns [0, 1) */
+function mulberry32(seed: number) {
+  return function next(): number {
+    let t = (seed += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+type GameType = 'guess-file' | 'function-age' | 'dependency-path' | 'component-duel' | 'complexity-race' | 'commit-message' | 'code-author';
+
+export interface GitHubRoundData {
+  /** Map of file path -> array of commit dates for that file */
+  fileCommits: Record<string, string[]>;
+  /** All commit dates across the repo (for sparkline) */
+  allCommitDates: string[];
+  /** Map of file path -> author name for that file's last commit */
+  fileAuthors: Record<string, string>;
+  /** Repo's earliest commit date */
+  repoStart: string;
+  /** Repo's latest commit date */
+  repoEnd: string;
+}
+
+/**
+ * Generate a single question for a given round using seeded randomness.
+ * Same (roundKey, gameType, seed) always produces the same question.
+ *
+ * @param roundKey     Increments each round; combined with seedBase for PRNG seed
+ * @param gameType     Which game to generate a question for
+ * @param files        Parsed file list from the codebase
+ * @param metrics      Complexity metrics
+ * @param gitHubData   Optional GitHub data (commits, authors) for function-age / code-author
+ * @param seedBase     Base seed for PRNG (e.g., a hash of the repo name)
+ * @param difficulty   Easy/medium/hard — affects scoring formula but not question content
+ */
+export function generateRoundQuestion(
+  roundKey: number,
+  gameType: GameType,
+  files: FileInfo[],
+  metrics: ComplexityMetrics,
+  gitHubData?: GitHubRoundData,
+  seedBase: number = 42,
+  difficulty: 'easy' | 'medium' | 'hard' = 'medium',
+): import('./types').GameQuestion {
+  const seed = mixSeed(seedBase >>> 0, roundKey * 31_127, gameType.length * 7_193);
+  const rand = mulberry32(seed);
+  const roundId = `r${roundKey}-${gameType}`;
+
+  switch (gameType) {
+    case 'guess-file':
+      return generateGuessFileQuestion(roundId, files, metrics, rand, difficulty);
+    case 'function-age':
+      return generateFunctionAgeQuestion(roundId, files, gitHubData, rand, difficulty);
+    case 'dependency-path':
+      return generateDependencyPathQuestion(roundId, files, rand, difficulty);
+    case 'component-duel':
+      return generateComponentDuelQuestion(roundId, files, rand, difficulty);
+    case 'complexity-race':
+      return generateComplexityRaceQuestion(roundId, files, rand, difficulty);
+    case 'commit-message':
+      return generateCommitMessageQuestion(roundId, files, metrics, rand, difficulty);
+    case 'code-author':
+      return generateCodeAuthorQuestion(roundId, files, gitHubData, rand, difficulty);
+    default:
+      return generateGuessFileQuestion(roundId, files, metrics, rand, difficulty);
+  }
+}
+
+function mixSeed(...parts: number[]): number {
+  let h = 0xdeadbeef;
+  for (const p of parts) {
+    h = Math.imul(h ^ p, 0x45d9f3b);
+    h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
+    h ^= h + Math.imul(h ^ (h >>> 16), 0x45d9f3b);
+  }
+  return (h ^ (h >>> 16)) >>> 0;
+}
+
+// ── Question Generators ─────────────────────────────────────────
+
+function generateGuessFileQuestion(
+  id: string,
+  files: FileInfo[],
+  metrics: ComplexityMetrics,
+  rand: () => number,
+  difficulty: 'easy' | 'medium' | 'hard',
+): import('./types').GameQuestion {
+  const topFiles = metrics.largestFiles.filter(f => f.lines > 20);
+  if (topFiles.length === 0) {
+    return makeFallbackQuestion(id, 'guess-file', 'No code files found in this codebase.', rand, difficulty);
+  }
+
+  // Pick a random file from the codebase
+  const idx = Math.floor(rand() * topFiles.length);
+  const targetFile = topFiles[idx]!;
+
+  // Different question styles based on difficulty
+  const styles = [
+    () => {
+      const otherFiles = topFiles.filter(f => f.path !== targetFile.path);
+      const wrong = getRandomItemsSeeded(otherFiles, 3, rand).map(f => f.name);
+      return {
+        question: `Which file has ${targetFile.lines.toLocaleString()} lines of code?`,
+        options: shuffleArraySeeded([targetFile.name, ...wrong], rand),
+        answer: targetFile.name,
+        explanation: `${targetFile.path} contains ${targetFile.lines.toLocaleString()} lines.`,
+      };
+    },
+    () => {
+      const lang = LANGUAGE_EXTENSIONS[targetFile.extension] || 'Unknown';
+      const wrongLangs = getRandomItemsSeeded(
+        metrics.languageDistribution.map(l => l.language).filter(l => l !== lang),
+        3,
+        rand
+      );
+      return {
+        question: `What language is "${targetFile.name}" written in?`,
+        options: shuffleArraySeeded([lang, ...wrongLangs], rand),
+        answer: lang,
+        explanation: `${targetFile.name} has the ${targetFile.extension} extension — it's ${lang}.`,
+      };
+    },
+    () => {
+      const ext = targetFile.extension || '(no extension)';
+      const wrongExts = getRandomItemsSeeded(
+        metrics.fileTypeDistribution.map(e => e.ext).filter(e => e !== ext),
+        3,
+        rand
+      );
+      return {
+        question: `How many ${ext} files are in this project?`,
+        options: shuffleArraySeeded([
+          String(metrics.fileTypeDistribution.find(e => e.ext === ext)?.count || 0),
+          ...wrongExts.map(() => String(Math.floor(rand() * 50) + 1)),
+        ], rand),
+        answer: String(metrics.fileTypeDistribution.find(e => e.ext === ext)?.count || 0),
+        explanation: `There are ${metrics.fileTypeDistribution.find(e => e.ext === ext)?.count || 0} ${ext} files in the codebase.`,
+      };
+    },
+  ];
+
+  const style = styles[Math.floor(rand() * styles.length)]!;
+  const q = style();
+  return {
+    id,
+    type: 'guess-file',
+    question: q.question,
+    options: q.options,
+    answer: q.answer,
+    explanation: q.explanation,
+    difficulty,
+  };
+}
+
+function generateFunctionAgeQuestion(
+  id: string,
+  files: FileInfo[],
+  gitHubData: GitHubRoundData | undefined,
+  rand: () => number,
+  difficulty: 'easy' | 'medium' | 'hard',
+): import('./types').GameQuestion {
+  if (!gitHubData || Object.keys(gitHubData.fileCommits).length === 0) {
+    // Fallback: pick a file and ask about it generically
+    const codeFiles = files.filter(f => f.lines > 20);
+    if (codeFiles.length === 0) {
+      return makeFallbackQuestion(id, 'function-age', 'Need more files to ask about their age.', rand, difficulty);
+    }
+    const target = codeFiles[Math.floor(rand() * codeFiles.length)]!;
+    const years = ['2019', '2020', '2021', '2022', '2023', '2024', '2025'];
+    const correctYear = years[Math.floor(rand() * years.length)]!;
+    const wrongYears = getRandomItemsSeeded(years.filter(y => y !== correctYear), 3, rand);
+    return {
+      id,
+      type: 'function-age',
+      question: `When was "${target.name}" last modified?`,
+      options: shuffleArraySeeded([correctYear, ...wrongYears], rand),
+      answer: correctYear,
+      explanation: `Based on the repository history, ${target.name} was most recently modified in ${correctYear}.`,
+      difficulty,
+      codeSnippet: target.content?.substring(0, 300) ?? `// ${target.name}\n// ${target.lines} lines`,
+    };
+  }
+
+  // Use GitHub data: pick a file with commit history
+  const filePaths = Object.keys(gitHubData.fileCommits).filter(
+    p => gitHubData.fileCommits[p].length > 0
+  );
+  if (filePaths.length === 0) {
+    return makeFallbackQuestion(id, 'function-age', 'No commit history found.', rand, difficulty);
+  }
+
+  const targetPath = filePaths[Math.floor(rand() * filePaths.length)!];
+  const commits = gitHubData.fileCommits[targetPath]!.sort();
+  // Pick a random commit date from this file's history
+  const commitIdx = Math.floor(rand() * commits.length);
+  const correctDate = commits[commitIdx]!;
+
+  // Build sparkline: group commits by month
+  const monthlyData = buildMonthlySparkline(gitHubData.allCommitDates);
+
+  // Generate date range options (4 quarters or years)
+  const repoStart = new Date(gitHubData.repoStart);
+  const repoEnd = new Date(gitHubData.repoEnd);
+  const rangeYears = getYearOptions(repoStart, repoEnd, correctDate, rand);
+
+  const targetName = targetPath.split('/').pop() || targetPath;
+  return {
+    id,
+    type: 'function-age',
+    question: `When was "${targetName}" last modified?`,
+    options: shuffleArraySeeded(rangeYears, rand),
+    answer: formatDateOption(new Date(correctDate)),
+    explanation: `The last commit touching ${targetName} was on ${new Date(correctDate).toLocaleDateString()}.`,
+    difficulty,
+    codeSnippet: files.find(f => f.path === targetPath)?.content?.substring(0, 300) ?? `// ${targetName}`,
+    proximateAnswer: correctDate,
+    dateRange: { start: gitHubData.repoStart, end: gitHubData.repoEnd },
+    sparklineData: monthlyData,
+  };
+}
+
+function generateDependencyPathQuestion(
+  id: string,
+  files: FileInfo[],
+  rand: () => number,
+  difficulty: 'easy' | 'medium' | 'hard',
+): import('./types').GameQuestion {
+  const pairs = inferDependencyPairs(files);
+  if (pairs.length === 0) {
+    return makeFallbackQuestion(id, 'dependency-path', 'No clear import relationships found in this codebase.', rand, difficulty);
+  }
+  const [targetFile, importers] = pairs[Math.floor(rand() * pairs.length)!];
+  if (importers.length === 0) {
+    return makeFallbackQuestion(id, 'dependency-path', 'No clear import relationships found.', rand, difficulty);
+  }
+  const correctImporter = importers[Math.floor(rand() * importers.length)!];
+  const allNames = files.map(f => f.name).filter(n => n !== correctImporter && n !== targetFile);
+  const wrongFiles = getRandomItemsSeeded(allNames, 3, rand);
+
+  return {
+    id,
+    type: 'dependency-path',
+    question: `Which file imports "${targetFile}"?`,
+    options: shuffleArraySeeded([correctImporter, ...wrongFiles], rand),
+    answer: correctImporter,
+    explanation: `${correctImporter} imports ${targetFile}.`,
+    difficulty,
+    codeSnippet: files.find(f => f.name === correctImporter)?.content?.substring(0, 300),
+  };
+}
+
+function generateComponentDuelQuestion(
+  id: string,
+  files: FileInfo[],
+  rand: () => number,
+  difficulty: 'easy' | 'medium' | 'hard',
+): import('./types').GameQuestion {
+  const purposes = inferFilePurpose(files);
+  if (purposes.length === 0) {
+    return makeFallbackQuestion(id, 'component-duel', 'Not enough files to generate purpose-based questions.', rand, difficulty);
+  }
+  const [fileName, purpose] = purposes[Math.floor(rand() * purposes.length)!];
+  const allNames = files.map(f => f.name).filter(n => n !== fileName);
+  const wrongOpts = getRandomItemsSeeded(allNames, 3, rand);
+
+  return {
+    id,
+    type: 'component-duel',
+    question: `Which file is most likely responsible for "${purpose}"?`,
+    options: shuffleArraySeeded([fileName, ...wrongOpts], rand),
+    answer: fileName,
+    explanation: `${fileName} is typically responsible for ${purpose}.`,
+    difficulty,
+  };
+}
+
+function generateComplexityRaceQuestion(
+  id: string,
+  files: FileInfo[],
+  rand: () => number,
+  difficulty: 'easy' | 'medium' | 'hard',
+): import('./types').GameQuestion {
+  const codeFiles = files.filter(f => f.lines > 10);
+  if (codeFiles.length < 4) {
+    return makeFallbackQuestion(id, 'complexity-race', 'Need at least 4 files for a complexity race.', rand, difficulty);
+  }
+  const pool = getRandomItemsSeeded(codeFiles, 4, rand);
+  // Sort by lines descending for the answer
+  const sorted = [...pool].sort((a, b) => b.lines - a.lines);
+  const correctOrder = sorted.map(f => `${f.name} (${f.lines} lines)`).join('|');
+
+  return {
+    id,
+    type: 'complexity-race',
+    question: `Rank these files from LARGEST to SMALLEST (click in order):`,
+    options: pool.map(f => `${f.name} (${f.lines} lines)`),
+    answer: correctOrder,
+    explanation: sorted.map((f, i) => `${i + 1}. ${f.name}: ${f.lines} lines`).join(', '),
+    difficulty,
+  };
+}
+
+function generateCommitMessageQuestion(
+  id: string,
+  files: FileInfo[],
+  metrics: ComplexityMetrics,
+  rand: () => number,
+  difficulty: 'easy' | 'medium' | 'hard',
+): import('./types').GameQuestion {
+  const topFiles = metrics.largestFiles.slice(0, 8);
+  if (topFiles.length === 0) {
+    return makeFallbackQuestion(id, 'commit-message', 'No files found for commit message questions.', rand, difficulty);
+  }
+  const target = topFiles[Math.floor(rand() * topFiles.length)!];
+  const pairs = inferCommitMessages([target]);
+  const [, msgs] = pairs[0]!;
+  const correct = msgs[0]!;
+  const wrong = getRandomItemsSeeded([...msgs.slice(1), ...getDefaultCommitMessages()], 3, rand);
+
+  return {
+    id,
+    type: 'commit-message',
+    question: `A developer just edited \`${target.name}\`. What did they most likely do?`,
+    options: shuffleArraySeeded([correct, ...wrong], rand),
+    answer: correct,
+    explanation: `Most commits touching ${target.name} follow this pattern.`,
+    difficulty,
+    codeSnippet: target.content?.substring(0, 200),
+  };
+}
+
+function generateCodeAuthorQuestion(
+  id: string,
+  files: FileInfo[],
+  gitHubData: GitHubRoundData | undefined,
+  rand: () => number,
+  difficulty: 'easy' | 'medium' | 'hard',
+): import('./types').GameQuestion {
+  if (!gitHubData || Object.keys(gitHubData.fileAuthors).length === 0) {
+    // Fallback: pick a random file, generate fake author
+    const codeFiles = files.filter(f => f.lines > 20);
+    if (codeFiles.length === 0) {
+      return makeFallbackQuestion(id, 'code-author', 'Need more files for author questions.', rand, difficulty);
+    }
+    const target = codeFiles[Math.floor(rand() * codeFiles.length)!];
+    const fakeAuthors = ['Sarah Chen', 'Marcus Rodriguez', 'Priya Patel', 'Alex Kim', 'Jordan Taylor'];
+    const correctAuthor = fakeAuthors[Math.floor(rand() * fakeAuthors.length)!];
+    const wrongAuthors = getRandomItemsSeeded(fakeAuthors.filter(a => a !== correctAuthor), 3, rand);
+
+    return {
+      id,
+      type: 'code-author',
+      question: `Who most likely wrote "${target.name}"?`,
+      options: shuffleArraySeeded([correctAuthor, ...wrongAuthors], rand),
+      answer: correctAuthor,
+      explanation: `Based on commit patterns, ${correctAuthor} appears to be the primary author of ${target.name}.`,
+      difficulty,
+      codeSnippet: target.content?.substring(0, 300),
+      authorName: correctAuthor,
+    };
+  }
+
+  const filePaths = Object.keys(gitHubData.fileAuthors);
+  if (filePaths.length === 0) {
+    return makeFallbackQuestion(id, 'code-author', 'No author data available.', rand, difficulty);
+  }
+
+  const targetPath = filePaths[Math.floor(rand() * filePaths.length)!];
+  const correctAuthor = gitHubData.fileAuthors[targetPath]!;
+  const allAuthors = [...new Set(Object.values(gitHubData.fileAuthors))];
+  const wrongAuthors = getRandomItemsSeeded(
+    allAuthors.filter(a => a !== correctAuthor),
+    Math.min(3, allAuthors.length - 1),
+    rand
+  );
+  while (wrongAuthors.length < 3) {
+    wrongAuthors.push(`Contributor ${Math.floor(rand() * 100)}`);
+  }
+
+  const targetName = targetPath.split('/').pop() || targetPath;
+  return {
+    id,
+    type: 'code-author',
+    question: `Who most likely wrote "${targetName}"?`,
+    options: shuffleArraySeeded([correctAuthor, ...wrongAuthors], rand),
+    answer: correctAuthor,
+    explanation: `${correctAuthor} is the primary author on the most recent commits for ${targetName}.`,
+    difficulty,
+    codeSnippet: files.find(f => f.path === targetPath)?.content?.substring(0, 300),
+    authorName: correctAuthor,
+  };
+}
+
+// ── Helpers ─────────────────────────────────────────────────────
+
+function makeFallbackQuestion(
+  id: string,
+  type: import('./types').GameQuestion['type'],
+  msg: string,
+  rand: () => number,
+  difficulty: 'easy' | 'medium' | 'hard',
+): import('./types').GameQuestion {
+  const opts = ['Option A', 'Option B', 'Option C', 'Option D'];
+  return {
+    id,
+    type,
+    question: msg,
+    options: shuffleArraySeeded(opts, rand),
+    answer: opts[0]!,
+    explanation: 'No data available for this question type.',
+    difficulty,
+  };
+}
+
+function shuffleArraySeeded<T>(array: T[], rand: () => number): T[] {
+  const out = [...array];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [out[i], out[j]] = [out[j]!, out[i]!];
+  }
+  return out;
+}
+
+function getRandomItemsSeeded<T>(array: T[], count: number, rand: () => number): T[] {
+  const shuffled = shuffleArraySeeded([...array], rand);
+  return shuffled.slice(0, Math.min(count, shuffled.length));
+}
+
+function buildMonthlySparkline(allDates: string[]): { date: string; count: number }[] {
+  if (allDates.length === 0) return [];
+  const countByMonth = new Map<string, number>();
+  for (const d of allDates) {
+    const month = d.substring(0, 7); // YYYY-MM
+    countByMonth.set(month, (countByMonth.get(month) ?? 0) + 1);
+  }
+  const sorted = Array.from(countByMonth.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  return sorted.map(([date, count]) => ({ date, count }));
+}
+
+function getYearOptions(repoStart: Date, repoEnd: Date, correctDate: string, rand: () => number): string[] {
+  const startYear = repoStart.getFullYear();
+  const endYear = repoEnd.getFullYear();
+  const correctYear = new Date(correctDate).getFullYear();
+  const years: string[] = [];
+
+  // Always include correct year
+  years.push(String(correctYear));
+
+  // Add years around the correct one
+  const around = [correctYear - 1, correctYear + 1].filter(y => y >= startYear && y <= endYear);
+  years.push(...around.map(String));
+
+  // Fill to 4 options with random years in range
+  while (years.length < 4) {
+    const y = startYear + Math.floor(rand() * (endYear - startYear + 1));
+    if (!years.includes(String(y))) years.push(String(y));
+  }
+
+  return years.slice(0, 4);
+}
+
+function formatDateOption(d: Date): string {
+  return `${d.getFullYear()}`;
+}

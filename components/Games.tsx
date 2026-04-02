@@ -1,481 +1,572 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Trophy, Zap, Target, RefreshCw, CheckCircle, XCircle, Brain, Swords } from 'lucide-react';
-import type { GameQuestion, GameSession } from '@/lib/types';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { FileInfo, ComplexityMetrics, GameQuestion } from '@/lib/types';
+import type { GitHubRoundData } from '@/lib/parser';
+import { generateRoundQuestion } from '@/lib/parser';
+import { FunctionAgeTimeline } from './FunctionAgeTimeline';
+
+// Shared game type definitions — imported by Dashboard for the selector
+export const GAME_TYPES = [
+  { id: 'guess-file', label: '🔍 Guess the File', desc: 'Identify files by description' },
+  { id: 'function-age', label: '📅 Function Age', desc: 'When was this code last modified?' },
+  { id: 'dependency-path', label: '🔗 Dependency Path', desc: 'Trace how files connect' },
+  { id: 'component-duel', label: '⚔️ Component Duel', desc: 'Match features to files' },
+  { id: 'complexity-race', label: '⚡ Complexity Race', desc: 'Rank files by size, fastest wins' },
+  { id: 'commit-message', label: '💬 Commit Message', desc: 'Guess the commit from a diff' },
+] as const;
+
+export type GameTypeId = typeof GAME_TYPES[number]['id'];
 
 interface GamesProps {
-  questions: GameQuestion[];
-  GAME_TYPES: ReadonlyArray<{ id: string; label: string; desc: string }>;
+  files: FileInfo[];
+  metrics: ComplexityMetrics;
+  gitHubData?: GitHubRoundData;
   soloGame: string | null;
   setSoloGame: (id: string | null) => void;
 }
 
-const STORAGE_KEY = 'unvibe_game_session';
+// ── Score persistence ───────────────────────────────────────────
 
-const defaultSession: GameSession = {
-  totalQuestions: 0,
-  correctAnswers: 0,
-  streak: 0,
-  highStreak: 0,
-  questionsAnswered: [],
-};
+const STORAGE_KEY = 'unvibe-vim-game-score';
 
-export default function Games({ questions, GAME_TYPES, soloGame, setSoloGame }: GamesProps) {
-  // Always initialize with default state for SSR consistency
-  const [session, setSession] = useState<GameSession>(defaultSession);
-  const [currentQ, setCurrentQ] = useState(0);
+export type InfiniteScore = { totalPoints: number; roundsPlayed: number };
+
+function defaultScore(): InfiniteScore {
+  return { totalPoints: 0, roundsPlayed: 0 };
+}
+
+function loadScore(): InfiniteScore {
+  if (typeof window === 'undefined') return defaultScore();
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return defaultScore();
+    const parsed = JSON.parse(raw);
+    return {
+      totalPoints: Math.max(0, Math.floor(parsed.totalPoints ?? 0)),
+      roundsPlayed: Math.max(0, Math.floor(parsed.roundsPlayed ?? 0)),
+    };
+  } catch {
+    return defaultScore();
+  }
+}
+
+function saveScore(score: InfiniteScore): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(score));
+  } catch { /* ignore */ }
+}
+
+function clearScore(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch { /* ignore */ }
+}
+
+// ── Seeded PRNG (same as parser) ───────────────────────────────
+
+function randomUint32(): number {
+  return (Math.random() * 0xffffffff) >>> 0;
+}
+
+function mulberry32(seed: number) {
+  return function next(): number {
+    let t = (seed += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function mixSeed(...parts: number[]): number {
+  let h = 0xdeadbeef;
+  for (const p of parts) {
+    h = Math.imul(h ^ p, 0x45d9f3b);
+    h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
+    h ^= h + Math.imul(h ^ (h >>> 16), 0x45d9f3b);
+  }
+  return (h ^ (h >>> 16)) >>> 0;
+}
+
+// ── Score calculation ───────────────────────────────────────────
+
+function calcPoints(q: GameQuestion, answer: string, difficulty: 'easy' | 'medium' | 'hard'): number {
+  if (q.type === 'function-age' || q.type === 'code-author') {
+    // These are timeline games — handled separately with proximity scoring
+    return 0;
+  }
+  if (q.type === 'complexity-race') {
+    // complexity-race answer is order-dependent
+    if (answer === q.answer) return 100;
+    return 0;
+  }
+  if (answer === q.answer) return 100;
+  return 0;
+}
+
+// ── Exposure tracking ───────────────────────────────────────────
+
+const EXPOSURE_POWER = 2.45;
+
+function itemWeight(id: string, exposure: Record<string, number>): number {
+  const c = exposure[id] ?? 0;
+  return 1 / Math.pow(1 + c, EXPOSURE_POWER);
+}
+
+function weightedPick<T extends { id: string }>(
+  items: T[],
+  weightOf: (item: T) => number,
+  rand: () => number
+): T | null {
+  if (items.length === 0) return null;
+  if (items.length === 1) return items[0]!;
+  let total = 0;
+  const w: number[] = [];
+  for (const t of items) {
+    const wi = Math.max(weightOf(t), 1e-12);
+    w.push(wi);
+    total += wi;
+  }
+  let r = rand() * total;
+  for (let i = 0; i < items.length; i++) {
+    r -= w[i]!;
+    if (r < 0) return items[i]!;
+  }
+  return items[items.length - 1]!;
+}
+
+// ── Main Games Component ───────────────────────────────────────
+
+const DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
+type Difficulty = typeof DIFFICULTIES[number];
+
+export default function Games({ files, metrics, gitHubData, soloGame, setSoloGame }: GamesProps) {
+  const [gameType, setGameType] = useState<string>(soloGame ?? 'guess-file');
+  const [difficulty, setDifficulty] = useState<Difficulty>('medium');
+  const [roundKey, setRoundKey] = useState(0);
+  const [score, setScore] = useState<InfiniteScore>(defaultScore);
+  const [revealed, setRevealed] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
-  const [showResult, setShowResult] = useState(false);
-  const [gameMode, setGameMode] = useState<'quiz' | 'duel'>('quiz');
-  const [duelScore, setDuelScore] = useState({ player: 0, ai: 0 });
+  const [sessionSalt] = useState(() => randomUint32());
+  const [roundSalt, setRoundSalt] = useState(() => randomUint32());
+  const [recentIds, setRecentIds] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [complexityOrder, setComplexityOrder] = useState<string[]>([]);
+  const [complexityStep, setComplexityStep] = useState(0);
+  const [timelineGuess, setTimelineGuess] = useState<{ ms: number; pts: number } | null>(null);
 
-  // Filter to active questions based on solo game mode
-  const activeQuestions = soloGame
-    ? questions.filter(q => q.type === soloGame)
-    : questions;
+  const exposureRef = useRef<Record<string, number>>({});
+  const exposureRefInitialized = useRef(false);
 
-  // Load from sessionStorage only after mount (client-only)
+  // Load score and exposure from storage
   useEffect(() => {
+    const saved = loadScore();
+    setScore(saved);
     try {
-      const saved = sessionStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // Normalize: reset questionsAnswered and streak on load to avoid stale state
-        const normalized: GameSession = {
-          totalQuestions: parsed.totalQuestions ?? 0,
-          correctAnswers: parsed.correctAnswers ?? 0,
-          streak: 0,
-          highStreak: parsed.highStreak ?? 0,
-          questionsAnswered: [],
-        };
-        setSession(normalized);
-      }
-    } catch {
-      // ignore parse errors
-    }
+      const expRaw = localStorage.getItem(STORAGE_KEY + '_exposure');
+      if (expRaw) exposureRef.current = JSON.parse(expRaw);
+    } catch { /* ignore */ }
+    exposureRefInitialized.current = true;
     setHydrated(true);
   }, []);
 
-  // Reset current question index when soloGame changes
+  // Persist score
   useEffect(() => {
-    setCurrentQ(0);
-    setSelected(null);
-    setShowResult(false);
-  }, [soloGame]);
+    if (hydrated) saveScore(score);
+  }, [score, hydrated]);
 
-  // Persist to sessionStorage on change
+  // Persist exposure
   useEffect(() => {
     if (hydrated) {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+      try {
+        localStorage.setItem(STORAGE_KEY + '_exposure', JSON.stringify(exposureRef.current));
+      } catch { /* ignore */ }
     }
-  }, [session, hydrated]);
+  }, [hydrated, recentIds]);
+
+  // Reset on game type change
+  useEffect(() => {
+    setRoundKey(0);
+    setRoundSalt(randomUint32());
+    setRevealed(false);
+    setSelected(null);
+    setComplexityOrder([]);
+    setComplexityStep(0);
+    setTimelineGuess(null);
+  }, [gameType]);
+
+  // Generate question for current round
+  const currentQ = useMemo<GameQuestion | null>(() => {
+    if (!hydrated) return null;
+    const seedBase = 42; // Could be repo-hashed for determinism
+    const q = generateRoundQuestion(roundKey, gameType as 'guess-file' | 'function-age' | 'dependency-path' | 'component-duel' | 'complexity-race' | 'commit-message' | 'code-author', files, metrics, gitHubData, seedBase, difficulty);
+    return q;
+  }, [roundKey, gameType, files, metrics, gitHubData, difficulty, hydrated]);
+
+  const avgPts = score.roundsPlayed > 0 ? Math.round(score.totalPoints / score.roundsPlayed) : 0;
+
+  const handleAnswer = useCallback((answer: string) => {
+    if (!currentQ || revealed) return;
+    setSelected(answer);
+
+    if (currentQ.type === 'function-age' || currentQ.type === 'code-author') {
+      // Timeline games — don't double-score; timelineGuess carries the points
+      setRevealed(true);
+      return;
+    }
+
+    const pts = calcPoints(currentQ, answer, difficulty);
+    setScore(prev => ({
+      totalPoints: prev.totalPoints + pts,
+      roundsPlayed: prev.roundsPlayed + 1,
+    }));
+    exposureRef.current[currentQ.id] = (exposureRef.current[currentQ.id] ?? 0) + 1;
+    setRecentIds(prev => [...prev, currentQ.id].slice(-20));
+    setRevealed(true);
+  }, [currentQ, revealed, difficulty]);
+
+  const handleTimelineGuess = useCallback((guessMs: number, pts: number) => {
+    if (!currentQ || revealed) return;
+    setTimelineGuess({ ms: guessMs, pts });
+    setScore(prev => ({
+      totalPoints: prev.totalPoints + pts,
+      roundsPlayed: prev.roundsPlayed + 1,
+    }));
+    exposureRef.current[currentQ.id] = (exposureRef.current[currentQ.id] ?? 0) + 1;
+    setRecentIds(prev => [...prev, currentQ.id].slice(-20));
+    setRevealed(true);
+  }, [currentQ, revealed]);
+
+  const nextRound = useCallback(() => {
+    setRoundSalt(randomUint32());
+    setRevealed(false);
+    setSelected(null);
+    setComplexityOrder([]);
+    setComplexityStep(0);
+    setTimelineGuess(null);
+    setRoundKey(k => k + 1);
+  }, []);
+
+  const complexitySelect = useCallback((option: string) => {
+    if (!currentQ || revealed || currentQ.type !== 'complexity-race') return;
+    const newOrder = [...complexityOrder, option];
+    setComplexityOrder(newOrder);
+    setComplexityStep(newOrder.length);
+
+    if (newOrder.length === 4) {
+      // Completed — check answer
+      const answerStr = newOrder.join('|');
+      const pts = calcPoints(currentQ, answerStr, difficulty);
+      setScore(prev => ({
+        totalPoints: prev.totalPoints + pts,
+        roundsPlayed: prev.roundsPlayed + 1,
+      }));
+      exposureRef.current[currentQ.id] = (exposureRef.current[currentQ.id] ?? 0) + 1;
+      setRecentIds(prev => [...prev, currentQ.id].slice(-20));
+      setRevealed(true);
+    }
+  }, [currentQ, revealed, complexityOrder, difficulty]);
+
+  const resetProgress = useCallback(() => {
+    if (!window.confirm('Reset all game progress? This will clear your score and exposure history.')) return;
+    setScore(defaultScore());
+    exposureRef.current = {};
+    setRecentIds([]);
+    clearScore();
+  }, []);
 
   if (!hydrated) {
     return (
-      <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-secondary)' }}>
+      <div style={{
+        textAlign: 'center',
+        padding: '80px 0',
+        fontFamily: "'JetBrains Mono', monospace",
+        color: '#858585',
+      }}>
         <div style={{
           width: '36px', height: '36px',
-          border: '2px solid rgba(123,92,255,0.2)',
-          borderTopColor: '#7B5CFF',
+          border: '2px solid rgba(86,156,214,0.2)',
+          borderTopColor: '#569cd6',
           borderRadius: '50%',
           animation: 'spin 0.8s linear infinite',
           margin: '0 auto 16px',
         }} />
-        <p>Loading games...</p>
+        <p style={{ fontSize: '13px' }}>Loading games...</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
-
-  if (activeQuestions.length === 0) {
-    return (
-      <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-secondary)' }}>
-        <p style={{ fontSize: '18px', marginBottom: '8px' }}>No questions in this game yet.</p>
-        <p style={{ fontSize: '14px' }}>Try switching to Mixed mode or run AI Analysis.</p>
-        <button
-          onClick={() => setSoloGame(null)}
-          className="btn-primary"
-          style={{ marginTop: '20px', padding: '12px 24px', fontSize: '14px' }}
-        >
-          🎲 Back to Mixed Mode
-        </button>
-      </div>
-    );
-  }
-
-  const q = activeQuestions[currentQ % activeQuestions.length];
-  const answered = selected !== null;
-  const correct = selected === q?.answer;
-  const accuracy = session.totalQuestions > 0
-    ? Math.round((session.correctAnswers / session.totalQuestions) * 100)
-    : 0;
-
-  const handleAnswer = (answer: string) => {
-    if (answered) return;
-    setSelected(answer);
-    setShowResult(true);
-    const isCorrect = answer === q.answer;
-    const newSession = {
-      ...session,
-      totalQuestions: session.totalQuestions + 1,
-      correctAnswers: session.correctAnswers + (isCorrect ? 1 : 0),
-      streak: isCorrect ? session.streak + 1 : 0,
-      highStreak: isCorrect ? Math.max(session.highStreak, session.streak + 1) : session.highStreak,
-      questionsAnswered: [
-        ...session.questionsAnswered,
-        { questionId: q.id, correct: isCorrect },
-      ],
-    };
-    setSession(newSession);
-
-    if (gameMode === 'duel') {
-      const aiCorrect = Math.random() > 0.4;
-      setDuelScore(prev => ({
-        player: prev.player + (isCorrect ? 1 : 0),
-        ai: prev.ai + (aiCorrect ? 1 : 0),
-      }));
-    }
-  };
-
-  const resetGame = () => {
-    setCurrentQ(0);
-    setSelected(null);
-    setShowResult(false);
-  };
-
-  const nextQuestion = () => {
-    resetGame();
-    setCurrentQ(prev => (prev + 1) % activeQuestions.length);
-  };
 
   return (
-    <div style={{ padding: '80px 0' }}>
-      <div className="container">
-        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <h2 style={{
-            fontFamily: 'var(--font-outfit)',
-            fontSize: 'clamp(28px, 4vw, 40px)',
-            fontWeight: 800,
-            letterSpacing: '-0.02em',
-            marginBottom: '12px',
-          }}>
-            <span className="gradient-text">Quiz Games</span>
-          </h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '16px', marginBottom: '20px' }}>
-            {activeQuestions.length} questions {soloGame ? `in ${GAME_TYPES.find(g => g.id === soloGame)?.label ?? soloGame}` : 'from your codebase'}
-          </p>
+    <div className="vim-theme" style={{ padding: '0' }}>
+      {/* Terminal wrapper */}
+      <div className="vim-terminal" style={{ maxWidth: '720px', margin: '0 auto' }}>
+        {/* Title bar */}
+        <div className="vim-titlebar">
+          <span className="vim-titlebar-dot" style={{ background: '#f14c4c' }} />
+          <span className="vim-titlebar-dot" style={{ background: '#fbbf24' }} />
+          <span className="vim-titlebar-dot" style={{ background: '#22c55e' }} />
+          <span className="vim-titlebar-title">unvibe.games — vim</span>
+        </div>
 
-          {/* Mode selector: Mixed vs Solo */}
-          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button
-              onClick={() => setSoloGame(null)}
-              style={{
-                padding: '8px 18px',
-                background: soloGame === null ? 'var(--accent-subtle)' : 'var(--bg-elevated)',
-                border: `1px solid ${soloGame === null ? 'rgba(123,92,255,0.4)' : 'var(--border)'}`,
-                borderRadius: '100px',
-                color: soloGame === null ? 'var(--accent)' : 'var(--text-muted)',
-                cursor: 'pointer',
-                fontFamily: 'var(--font-outfit)',
-                fontWeight: 600,
-                fontSize: '13px',
-                transition: 'all 0.2s',
-              }}
-            >
-              🎲 Mixed
-            </button>
-            {GAME_TYPES.filter(g => activeQuestions.some(q => q.type === g.id)).map(game => (
-              <button
-                key={game.id}
-                onClick={() => setSoloGame(game.id === soloGame ? null : game.id)}
+        <div className="vim-content">
+          {/* Score echo */}
+          <div className="vim-echo">
+            <div className="vim-echo-line">:echo $score</div>
+            <div>
+              <span style={{ color: '#dcdcaa' }}>Total:</span>{' '}
+              <span style={{ color: '#569cd6' }}>{score.totalPoints.toLocaleString()}</span>
+              {' pts · '}
+              <span style={{ color: '#b5cea8' }}>{score.roundsPlayed}</span>
+              {' rounds · avg '}
+              <span style={{ color: '#ce9178' }}>{avgPts}</span>
+              {' pts/round'}
+            </div>
+          </div>
+
+          {/* Game type selector :set game=TYPE */}
+          <div className="vim-set-selector">
+            <span className="vim-set-label">:set game=</span>
+            {GAME_TYPES.map(gt => (
+              <span
+                key={gt.id}
+                className="vim-set-value"
+                onClick={() => { setGameType(gt.id); setSoloGame(gt.id === soloGame ? null : gt.id); }}
                 style={{
-                  padding: '8px 18px',
-                  background: soloGame === game.id ? 'var(--accent-subtle)' : 'var(--bg-elevated)',
-                  border: `1px solid ${soloGame === game.id ? 'rgba(123,92,255,0.4)' : 'var(--border)'}`,
-                  borderRadius: '100px',
-                  color: soloGame === game.id ? 'var(--accent)' : 'var(--text-muted)',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-outfit)',
-                  fontWeight: 600,
-                  fontSize: '13px',
-                  transition: 'all 0.2s',
+                  background: gameType === gt.id ? 'rgba(86,156,214,0.15)' : undefined,
+                  borderColor: gameType === gt.id ? '#569cd6' : undefined,
+                  color: gameType === gt.id ? '#569cd6' : undefined,
                 }}
               >
-                {game.label}
-              </button>
+                {gt.id}
+              </span>
             ))}
           </div>
-        </div>
 
-        {/* Stats */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-          gap: '16px',
-          marginBottom: '32px',
-        }}>
-          {[
-            { icon: Trophy, label: 'Correct', value: session.correctAnswers, color: '#34D399' },
-            { icon: Target, label: 'Accuracy', value: `${accuracy}%`, color: 'var(--accent)' },
-            { icon: Zap, label: 'Streak', value: session.streak, color: '#FBBF24' },
-            { icon: Trophy, label: 'Best', value: session.highStreak, color: '#EC4899' },
-          ].map(({ icon: Icon, label, value, color }, i) => (
-            <div key={i} className="card animate-fade-up" style={{ padding: '24px', animationDelay: `${i * 60}ms`, textAlign: 'center' }}>
-              <Icon size={20} color={color} style={{ marginBottom: '10px' }} />
-              <div style={{ fontFamily: 'Outfit', fontSize: '28px', fontWeight: 700, color, letterSpacing: '-0.02em' }}>{value}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'JetBrains Mono', marginTop: '4px' }}>{label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Mode toggle */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', justifyContent: 'center' }}>
-          {[
-            { id: 'quiz' as const, label: 'Solo Quiz' },
-            { id: 'duel' as const, label: '🤖 AI Duel' },
-          ].map(({ id, label }) => (
-            <button
-              key={id}
-              onClick={() => { setGameMode(id); resetGame(); }}
-              style={{
-                padding: '12px 24px',
-                background: gameMode === id ? 'var(--accent-subtle)' : 'var(--bg-card)',
-                border: `1px solid ${gameMode === id ? 'rgba(123,92,255,0.3)' : 'var(--border)'}`,
-                borderRadius: 'var(--radius-md)',
-                color: gameMode === id ? 'var(--accent)' : 'var(--text-secondary)',
-                cursor: 'pointer',
-                fontFamily: 'Outfit',
-                fontWeight: 600,
-                fontSize: '14px',
-                transition: 'all 0.2s',
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Duel score */}
-        {gameMode === 'duel' && (
-          <div className="card animate-fade-up" style={{ padding: '28px', marginBottom: '24px', textAlign: 'center' }}>
-            <div style={{ fontFamily: 'Outfit', fontSize: '52px', fontWeight: 800, letterSpacing: '-0.03em' }}>
-              <span style={{ color: 'var(--accent)' }}>{duelScore.player}</span>
-              <span style={{ color: 'var(--text-muted)', margin: '0 20px' }}>:</span>
-              <span style={{ color: '#EC4899' }}>{duelScore.ai}</span>
-            </div>
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px' }}>
-              You vs AI — AI wins ~40% of questions
-            </p>
+          {/* Difficulty selector */}
+          <div className="vim-set-selector">
+            <span className="vim-set-label">:set difficulty=</span>
+            {DIFFICULTIES.map(d => (
+              <span
+                key={d}
+                className="vim-set-value"
+                onClick={() => setDifficulty(d)}
+                style={{
+                  background: difficulty === d ? 'rgba(86,156,214,0.15)' : undefined,
+                  borderColor: difficulty === d ? '#569cd6' : undefined,
+                  color: difficulty === d ? '#569cd6' : undefined,
+                }}
+              >
+                {d}
+              </span>
+            ))}
           </div>
-        )}
 
-        {/* Question card */}
-        <div className="card animate-fade-up" style={{ maxWidth: '680px', margin: '0 auto', padding: '40px', animationDelay: '200ms' }}>
-          {/* Difficulty + type */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
-            <span style={{
-              padding: '6px 16px',
-              background: q.difficulty === 'easy' ? 'rgba(52,211,153,0.1)' : q.difficulty === 'medium' ? 'rgba(251,191,36,0.1)' : 'rgba(248,113,113,0.1)',
-              border: `1px solid ${q.difficulty === 'easy' ? 'rgba(52,211,153,0.2)' : q.difficulty === 'medium' ? 'rgba(251,191,36,0.2)' : 'rgba(248,113,113,0.2)'}`,
-              borderRadius: '100px',
-              fontSize: '11px',
-              fontFamily: 'JetBrains Mono',
-              fontWeight: 600,
-              color: q.difficulty === 'easy' ? '#34D399' : q.difficulty === 'medium' ? '#FBBF24' : '#F87171',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-            }}>
-              {q.type.replace('-', ' ')} · {q.difficulty}
+          {/* Round key display */}
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: '#6a9955', marginBottom: '16px' }}>
+            Round {roundKey + 1} · seed:{roundKey * 31_127 + gameType.length * 7_193}
+          </div>
+
+          {/* Question card */}
+          {!currentQ ? (
+            <div className="vim-empty">
+              <div className="vim-empty-title">No question available</div>
+              <p>Not enough data in this codebase for the selected game type.</p>
+            </div>
+          ) : (
+            <div className="vim-card" style={{ marginBottom: '20px' }}>
+              <div className="vim-card-header">
+                <span>{currentQ.type}</span>
+                <span className={`vim-difficulty vim-difficulty-${currentQ.difficulty}`}>
+                  {currentQ.difficulty}
+                </span>
+              </div>
+
+              <div style={{ padding: '20px' }}>
+                {/* Question */}
+                <h3 style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: '14px',
+                  color: '#d4d4d4',
+                  marginBottom: '20px',
+                  lineHeight: 1.6,
+                  fontWeight: 400,
+                }}>
+                  {currentQ.question}
+                </h3>
+
+                {/* Code snippet */}
+                {currentQ.codeSnippet && (
+                  <div className="vim-code" style={{ marginBottom: '20px' }}>
+                    <div className="vim-code-header">
+                      <span>// code snippet</span>
+                      <span style={{ color: '#569cd6' }}>{currentQ.type}</span>
+                    </div>
+                    <div className="vim-code-content">
+                      <code>{currentQ.codeSnippet}</code>
+                    </div>
+                  </div>
+                )}
+
+                {/* Function-age timeline */}
+                {(currentQ.type === 'function-age' || currentQ.type === 'code-author') && currentQ.sparklineData && currentQ.dateRange && currentQ.proximateAnswer && (
+                  <FunctionAgeTimeline
+                    question={currentQ}
+                    revealed={revealed}
+                    onGuess={handleTimelineGuess}
+                  />
+                )}
+
+                {/* Regular answer options */}
+                {currentQ.type !== 'complexity-race' && currentQ.type !== 'function-age' && currentQ.type !== 'code-author' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                    {currentQ.options.map((option, i) => {
+                      const isSelected = selected === option;
+                      const isCorrect = option === currentQ.answer;
+                      let cls = '';
+                      if (revealed) {
+                        if (isCorrect) cls = 'vim-option-correct';
+                        else if (isSelected) cls = 'vim-option-wrong';
+                      } else if (isSelected) {
+                        cls = 'vim-option-selected';
+                      }
+                      return (
+                        <button
+                          key={i}
+                          className={`vim-option ${cls}`}
+                          onClick={() => !revealed && handleAnswer(option)}
+                          disabled={revealed}
+                        >
+                          <span className="vim-option-letter">
+                            {revealed ? (isCorrect ? '✓' : isSelected ? '✗' : String.fromCharCode(65 + i)) : String.fromCharCode(65 + i)}
+                          </span>
+                          <span className="vim-option-text">{option}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Complexity race: click-in-order UI */}
+                {currentQ.type === 'complexity-race' && (
+                  <div>
+                    <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: '#6a9955', marginBottom: '12px' }}>
+                      {complexityStep === 0
+                        ? '// Click files in order from LARGEST to SMALLEST'
+                        : `// Selected: ${complexityStep}/4`}
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                      {currentQ.options.map((option, i) => {
+                        const isChosen = complexityOrder.includes(option);
+                        const isNext = !isChosen && complexityStep < 4;
+                        return (
+                          <button
+                            key={i}
+                            className={`vim-option ${isChosen ? 'vim-option-selected' : ''}`}
+                            onClick={() => isNext && !revealed && complexitySelect(option)}
+                            disabled={isChosen || revealed}
+                            style={{ opacity: isChosen ? 0.5 : 1 }}
+                          >
+                            <span className="vim-option-letter">
+                              {isChosen ? `${complexityOrder.indexOf(option) + 1}` : String.fromCharCode(65 + i)}
+                            </span>
+                            <span className="vim-option-text">{option}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Timeline info for function-age when no sparkline */}
+                {(currentQ.type === 'function-age' || currentQ.type === 'code-author') && !currentQ.sparklineData && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                    {currentQ.options.map((option, i) => {
+                      const isSelected = selected === option;
+                      const isCorrect = option === currentQ.answer;
+                      let cls = '';
+                      if (revealed) {
+                        if (isCorrect) cls = 'vim-option-correct';
+                        else if (isSelected) cls = 'vim-option-wrong';
+                      } else if (isSelected) {
+                        cls = 'vim-option-selected';
+                      }
+                      return (
+                        <button
+                          key={i}
+                          className={`vim-option ${cls}`}
+                          onClick={() => !revealed && handleAnswer(option)}
+                          disabled={revealed}
+                        >
+                          <span className="vim-option-letter">
+                            {revealed ? (isCorrect ? '✓' : isSelected ? '✗' : String.fromCharCode(65 + i)) : String.fromCharCode(65 + i)}
+                          </span>
+                          <span className="vim-option-text">{option}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Result */}
+                {revealed && (
+                  <div className={`vim-result ${selected === currentQ.answer || (timelineGuess && timelineGuess.pts > 0) ? 'vim-result-correct' : selected ? 'vim-result-wrong' : ''}`}>
+                    {currentQ.type === 'function-age' || currentQ.type === 'code-author' ? (
+                      timelineGuess ? (
+                        <div>
+                          <div className="vim-result-points">+{timelineGuess.pts.toLocaleString()} pts</div>
+                          <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: '#6a9955', marginTop: '8px' }}>
+                            {currentQ.explanation}
+                          </p>
+                        </div>
+                      ) : (
+                        <div>
+                          <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '13px', color: '#d4d4d4' }}>
+                            {currentQ.explanation}
+                          </p>
+                        </div>
+                      )
+                    ) : (
+                      <div>
+                        <p style={{
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: '13px',
+                          color: selected === currentQ.answer ? '#22c55e' : '#f14c4c',
+                          fontWeight: 700,
+                          marginBottom: '8px',
+                        }}>
+                          {selected === currentQ.answer ? '✓ Correct!' : '✗ Wrong'}
+                        </p>
+                        <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: '#6a9955' }}>
+                          {currentQ.explanation}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Next button */}
+                {revealed && (
+                  <div className="vim-next">
+                    <button className="vim-btn vim-btn-primary" onClick={nextRound}>
+                      next
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Reset button */}
+          <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <button className="vim-btn" onClick={resetProgress}>
+              :reset
+            </button>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#6a9955' }}>
+              // score and exposure auto-saved in this browser
             </span>
-          </div>
-
-          <h3 style={{
-            fontFamily: 'Outfit',
-            fontSize: '22px',
-            fontWeight: 600,
-            textAlign: 'center',
-            marginBottom: '32px',
-            lineHeight: 1.4,
-            letterSpacing: '-0.01em',
-          }}>
-            {q.question}
-          </h3>
-
-          {/* Code snippet for function-age and code-author */}
-          {q.codeSnippet && (q.type === 'function-age' || q.type === 'code-author') && (
-            <div style={{
-              marginBottom: '24px',
-              borderRadius: 'var(--radius-md)',
-              overflow: 'hidden',
-              border: '1px solid var(--border)',
-            }}>
-              <div style={{
-                padding: '10px 16px',
-                background: 'var(--bg-secondary)',
-                borderBottom: '1px solid var(--border)',
-                fontSize: '11px',
-                fontFamily: 'var(--font-jetbrains)',
-                color: 'var(--text-muted)',
-                display: 'flex',
-                justifyContent: 'space-between',
-              }}>
-                <span>Code snippet</span>
-                <span style={{ color: 'var(--accent)' }}>{q.type === 'function-age' ? 'Last modified?' : 'Who wrote this?'}</span>
-              </div>
-              <pre style={{
-                padding: '16px',
-                background: 'var(--bg-primary)',
-                margin: 0,
-                fontSize: '12px',
-                fontFamily: 'var(--font-jetbrains)',
-                color: 'var(--text-secondary)',
-                overflow: 'auto',
-                maxHeight: '200px',
-                lineHeight: 1.6,
-              }}>
-                <code>{q.codeSnippet}</code>
-              </pre>
-            </div>
-          )}
-
-          {/* Options */}
-          <div style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
-            {q.options.map((option, i) => {
-              const isSelected = selected === option;
-              const isCorrect = option === q.answer;
-              let bg = 'var(--bg-elevated)';
-              let border = 'var(--border)';
-
-              if (showResult) {
-                if (isCorrect) { bg = 'rgba(52,211,153,0.1)'; border = '#34D399'; }
-                else if (isSelected) { bg = 'rgba(248,113,113,0.1)'; border = '#F87171'; }
-              } else if (isSelected) {
-                bg = 'var(--accent-subtle)'; border = 'var(--accent)';
-              }
-
-              return (
-                <button
-                  key={i}
-                  onClick={() => handleAnswer(option)}
-                  disabled={answered}
-                  style={{
-                    padding: '16px 20px',
-                    background: bg,
-                    border: `1px solid ${border}`,
-                    borderRadius: 'var(--radius-md)',
-                    color: '#fff',
-                    fontSize: '14px',
-                    cursor: answered ? 'default' : 'pointer',
-                    transition: 'all 0.2s',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '14px',
-                    textAlign: 'left',
-                  }}
-                >
-                  <span style={{
-                    width: '28px', height: '28px',
-                    background: 'var(--bg-card)',
-                    borderRadius: '50%',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    fontFamily: 'var(--font-jetbrains)',
-                    color: showResult && isCorrect ? '#34D399' : showResult && isSelected && !isCorrect ? '#F87171' : 'var(--text-muted)',
-                    flexShrink: 0,
-                  }}>
-                    {showResult ? (
-                      isCorrect ? <CheckCircle size={14} /> : isSelected ? <XCircle size={14} /> : String.fromCharCode(65 + i)
-                    ) : String.fromCharCode(65 + i)}
-                  </span>
-                  <span style={{ flex: 1, fontFamily: 'var(--font-jetbrains)', fontSize: '13px' }}>{option}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Result */}
-          {showResult && (
-            <div className="animate-fade-up" style={{
-              padding: '20px',
-              background: correct ? 'rgba(52,211,153,0.06)' : 'rgba(248,113,113,0.06)',
-              border: `1px solid ${correct ? 'rgba(52,211,153,0.2)' : 'rgba(248,113,113,0.2)'}`,
-              borderRadius: 'var(--radius-md)',
-              marginBottom: '24px',
-            }}>
-              <div style={{
-                fontFamily: 'var(--font-outfit)',
-                fontWeight: 700,
-                fontSize: '18px',
-                color: correct ? '#34D399' : '#F87171',
-                marginBottom: '8px',
-              }}>
-                {correct ? '✓ Correct!' : '✗ Wrong'}
-              </div>
-              <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                {q.explanation}
-              </p>
-              <div style={{
-                display: 'inline-flex',
-                gap: '8px',
-                flexWrap: 'wrap',
-              }}>
-                {q.type === 'guess-file' && (
-                  <span style={{ fontSize: '11px', padding: '4px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-muted)', fontFamily: 'var(--font-jetbrains)' }}>
-                    {q.answer}
-                  </span>
-                )}
-                {q.type === 'function-age' && (
-                  <span style={{ fontSize: '11px', padding: '4px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--accent)', fontFamily: 'var(--font-jetbrains)' }}>
-                    {q.answer}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Navigation */}
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-            <button
-              onClick={resetGame}
-              className="btn-secondary"
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', padding: '12px 20px' }}
-            >
-              <RefreshCw size={14} /> Reset
-            </button>
-            {answered && (
-              <button
-                onClick={nextQuestion}
-                className="btn-primary"
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', padding: '12px 24px' }}
-              >
-                Next Question <span style={{ opacity: 0.7 }}>→</span>
-              </button>
-            )}
-          </div>
-
-          {/* Progress */}
-          <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            {activeQuestions.map((_, i) => (
-              <div
-                key={i}
-                onClick={() => { setCurrentQ(i); setSelected(null); setShowResult(false); }}
-                style={{
-                  width: '10px', height: '10px',
-                  borderRadius: '50%',
-                  background: i === currentQ
-                    ? 'var(--accent)'
-                    : session.questionsAnswered.find(q => q.questionId === activeQuestions[i].id)
-                      ? (session.questionsAnswered.find(q => q.questionId === activeQuestions[i].id)?.correct ? '#34D399' : '#F87171')
-                      : 'var(--border)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  border: i === currentQ ? '2px solid var(--accent)' : 'none',
-                  transform: i === currentQ ? 'scale(1.3)' : 'scale(1)',
-                }}
-              />
-            ))}
           </div>
         </div>
       </div>

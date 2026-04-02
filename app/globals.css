@@ -323,3 +323,491 @@ code, .mono {
   background: linear-gradient(90deg, transparent, var(--border), transparent);
   margin: 0;
 }
+
+/* ============================================================
+   VIM THEME — Games Terminal Aesthetic
+   ============================================================ */
+
+.vim-theme {
+  --vim-bg: #1e1e1e;
+  --vim-fg: #d4d4d4;
+  --vim-comment: #6a9955;
+  --vim-keyword: #569cd6;
+  --vim-string: #ce9178;
+  --vim-number: #b5cea8;
+  --vim-function: #dcdcaa;
+  --vim-operator: #d4d4d4;
+  --vim-line-number: #858585;
+  --vim-cursor: #aeafad;
+  --vim-selection-bg: #264f78;
+  --vim-active-line-bg: #2a2a2a;
+  --vim-border: #3c3c3c;
+  --vim-scrollbar: #424242;
+  --vim-gutter: #1e1e1e;
+}
+
+/* Games section terminal wrapper */
+.vim-terminal {
+  background: var(--vim-bg);
+  border: 1px solid var(--vim-border);
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 13px;
+  color: var(--vim-fg);
+}
+
+/* Terminal title bar */
+.vim-titlebar {
+  background: var(--vim-active-line-bg);
+  border-bottom: 1px solid var(--vim-border);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vim-titlebar-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.vim-titlebar-title {
+  margin-left: 8px;
+  font-size: 11px;
+  color: var(--vim-line-number);
+}
+
+/* Terminal content area */
+.vim-content {
+  padding: 20px;
+}
+
+/* Terminal prompt style */
+.vim-prompt {
+  color: var(--vim-function);
+}
+
+.vim-prompt::before {
+  content: '➜ ';
+  color: var(--vim-keyword);
+}
+
+.vim-cmd {
+  color: var(--vim-fg);
+}
+
+.vim-cmd::after {
+  content: '█';
+  color: var(--vim-cursor);
+  animation: vim-blink 1s step-end infinite;
+}
+
+@keyframes vim-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Score display */
+.vim-echo {
+  background: var(--vim-active-line-bg);
+  border: 1px solid var(--vim-border);
+  border-radius: 4px;
+  padding: 12px 16px;
+  margin: 16px 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.vim-echo-line {
+  color: var(--vim-comment);
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+/* Game card (terminal window) */
+.vim-card {
+  background: var(--vim-bg);
+  border: 1px solid var(--vim-border);
+  border-radius: 4px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.vim-card:hover {
+  border-color: var(--vim-keyword);
+}
+
+.vim-card-header {
+  background: var(--vim-active-line-bg);
+  border-bottom: 1px solid var(--vim-border);
+  padding: 6px 12px;
+  font-size: 11px;
+  color: var(--vim-line-number);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Buttons styled as commands */
+.vim-btn {
+  background: transparent;
+  border: 1px solid var(--vim-border);
+  border-radius: 3px;
+  color: var(--vim-keyword);
+  padding: 6px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.vim-btn:hover:not(:disabled) {
+  border-color: var(--vim-keyword);
+  background: var(--vim-active-line-bg);
+}
+
+.vim-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.vim-btn-primary {
+  background: var(--vim-keyword);
+  color: var(--vim-bg);
+  border-color: var(--vim-keyword);
+}
+
+.vim-btn-primary:hover:not(:disabled) {
+  background: #6fb0e8;
+  border-color: #6fb0e8;
+}
+
+/* Game selector styled as :set command */
+.vim-set-selector {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+
+.vim-set-label {
+  color: var(--vim-comment);
+}
+
+.vim-set-value {
+  color: var(--vim-string);
+  background: var(--vim-active-line-bg);
+  border: 1px solid var(--vim-border);
+  border-radius: 3px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.vim-set-value:hover {
+  border-color: var(--vim-keyword);
+}
+
+/* Progress bar */
+.vim-progress {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--vim-line-number);
+  margin: 8px 0;
+}
+
+.vim-progress-bar {
+  display: inline-block;
+}
+
+.vim-progress-filled {
+  color: var(--vim-function);
+}
+
+.vim-progress-empty {
+  color: var(--vim-border);
+}
+
+/* Answer options styled as vim choices */
+.vim-option {
+  background: var(--vim-bg);
+  border: 1px solid var(--vim-border);
+  border-radius: 3px;
+  padding: 10px 14px;
+  margin: 6px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.15s;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--vim-fg);
+}
+
+.vim-option:hover:not(:disabled):not(.vim-option-selected) {
+  border-color: var(--vim-keyword);
+  background: var(--vim-active-line-bg);
+}
+
+.vim-option-selected {
+  border-color: var(--vim-keyword);
+  background: rgba(86, 156, 214, 0.15);
+}
+
+.vim-option-correct {
+  border-color: var(--vim-number);
+  background: rgba(181, 206, 168, 0.15);
+}
+
+.vim-option-wrong {
+  border-color: #f14c4c;
+  background: rgba(241, 76, 76, 0.1);
+}
+
+.vim-option-letter {
+  color: var(--vim-line-number);
+  font-size: 11px;
+  min-width: 20px;
+}
+
+.vim-option-text {
+  flex: 1;
+}
+
+/* Timeline for function-age game */
+.vim-timeline {
+  background: var(--vim-bg);
+  border: 1px solid var(--vim-border);
+  border-radius: 4px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.vim-timeline-svg {
+  width: 100%;
+  height: 120px;
+  cursor: crosshair;
+}
+
+.vim-timeline-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--vim-line-number);
+  margin-top: 6px;
+}
+
+.vim-timeline-tooltip {
+  position: absolute;
+  background: var(--vim-active-line-bg);
+  border: 1px solid var(--vim-border);
+  border-radius: 3px;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--vim-fg);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.vim-timeline-label {
+  background: var(--vim-active-line-bg);
+  border: 1px solid var(--vim-border);
+  border-radius: 3px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--vim-function);
+  margin-bottom: 12px;
+  display: inline-block;
+}
+
+/* Code snippet in terminal */
+.vim-code {
+  background: var(--vim-bg);
+  border: 1px solid var(--vim-border);
+  border-radius: 3px;
+  margin: 12px 0;
+  overflow: hidden;
+}
+
+.vim-code-header {
+  background: var(--vim-active-line-bg);
+  border-bottom: 1px solid var(--vim-border);
+  padding: 6px 12px;
+  font-size: 11px;
+  color: var(--vim-line-number);
+  display: flex;
+  justify-content: space-between;
+}
+
+.vim-code-content {
+  padding: 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--vim-fg);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* Syntax highlighting */
+.vim-keyword { color: var(--vim-keyword); }
+.vim-string { color: var(--vim-string); }
+.vim-number { color: var(--vim-number); }
+.vim-function { color: var(--vim-function); }
+.vim-comment { color: var(--vim-comment); }
+.vim-operator { color: var(--vim-operator); }
+
+/* Difficulty badge */
+.vim-difficulty {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-left: 8px;
+}
+
+.vim-difficulty-easy {
+  background: rgba(181, 206, 168, 0.2);
+  color: var(--vim-number);
+  border: 1px solid rgba(181, 206, 168, 0.3);
+}
+
+.vim-difficulty-medium {
+  background: rgba(206, 145, 120, 0.2);
+  color: var(--vim-string);
+  border: 1px solid rgba(206, 145, 120, 0.3);
+}
+
+.vim-difficulty-hard {
+  background: rgba(248, 113, 113, 0.2);
+  color: #f14c4c;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+/* Result display */
+.vim-result {
+  background: var(--vim-active-line-bg);
+  border: 1px solid var(--vim-border);
+  border-radius: 4px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.vim-result-correct {
+  border-color: var(--vim-number);
+}
+
+.vim-result-wrong {
+  border-color: #f14c4c;
+}
+
+.vim-result-points {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--vim-function);
+}
+
+/* Empty state */
+.vim-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--vim-comment);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+}
+
+.vim-empty-title {
+  font-size: 16px;
+  color: var(--vim-string);
+  margin-bottom: 8px;
+}
+
+/* Game tabs */
+.vim-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--vim-border);
+  padding-bottom: 2px;
+}
+
+.vim-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--vim-line-number);
+  padding: 8px 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.vim-tab:hover {
+  color: var(--vim-fg);
+}
+
+.vim-tab-active {
+  color: var(--vim-keyword);
+  border-bottom-color: var(--vim-keyword);
+}
+
+/* Score summary line */
+.vim-score-summary {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--vim-comment);
+  padding: 8px 12px;
+  background: var(--vim-active-line-bg);
+  border-radius: 4px;
+  margin: 12px 0;
+}
+
+.vim-score-value {
+  color: var(--vim-function);
+}
+
+/* Answer reveal lines */
+.vim-reveal {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0;
+  font-size: 12px;
+}
+
+.vim-reveal-line {
+  width: 2px;
+  height: 20px;
+}
+
+.vim-reveal-correct {
+  background: #22c55e;
+}
+
+.vim-reveal-guess {
+  background: var(--vim-keyword);
+}
+
+.vim-reveal-label {
+  color: var(--vim-line-number);
+}
+
+/* Next round button */
+.vim-next {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.vim-next::before {
+  content: ':';
+  color: var(--vim-keyword);
+}

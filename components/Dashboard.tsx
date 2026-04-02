@@ -5,8 +5,10 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 import { Files, Code, Layers, AlertTriangle, TrendingUp, FolderTree, ChevronDown, ChevronRight, Bot, RefreshCw, AlertCircle } from 'lucide-react';
 import type { FileInfo, ComplexityMetrics, GameQuestion } from '@/lib/types';
 import { buildDirectoryTree } from '@/lib/parser';
+import { fetchRepoTree, fetchFileCommits } from '@/lib/github';
+import type { GitHubRoundData } from '@/lib/parser';
 import { escapeHtml } from '@/lib/sanitize';
-import Games from './Games';
+import Games, { GAME_TYPES } from './Games';
 
 interface GitHubSource {
   owner: string;
@@ -30,15 +32,7 @@ const LOAD_COLORS = {
 
 const LANG_COLORS = ['#7B5CFF', '#5C8FFF', '#34D399', '#FBBF24', '#F97316', '#F87171', '#EC4899', '#8B5CF6'];
 
-// All available game types with labels
-export const GAME_TYPES = [
-  { id: 'guess-file', label: '🔍 Guess the File', desc: 'Identify files by description' },
-  { id: 'function-age', label: '📅 Function Age', desc: 'When was this code last modified?' },
-  { id: 'dependency-path', label: '🔗 Dependency Path', desc: 'Trace how files connect' },
-  { id: 'component-duel', label: '⚔️ Component Duel', desc: 'Match features to files' },
-  { id: 'complexity-race', label: '⚡ Complexity Race', desc: 'Rank files by size, fastest wins' },
-  { id: 'commit-message', label: '💬 Commit Message', desc: 'Guess the commit from a diff' },
-] as const;
+// All available game types with labels — imported from Games.tsx
 
 export default function Dashboard({ files, metrics, questions, gitHubData }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'files' | 'games'>('overview');
@@ -53,11 +47,11 @@ export default function Dashboard({ files, metrics, questions, gitHubData }: Das
   const [aiSuccess, setAiSuccess] = useState(false);
   const [aiInsights, setAiInsights] = useState<{ insights: string[]; cognitiveDebtSignals: string[] } | null>(null);
   const [extraQuestions, setExtraQuestions] = useState<GameQuestion[]>([]);
-  const [selectedGameTypes, setSelectedGameTypes] = useState<Set<string>>(
-    new Set(GAME_TYPES.map(g => g.id))
-  );
-  // Track active solo game — null means "mixed mode"
   const [soloGame, setSoloGame] = useState<string | null>(null);
+
+  // GitHub round data for infinite game generation
+  const [gitHubRoundData, setGitHubRoundData] = useState<GitHubRoundData | null>(null);
+  const [gitHubLoading, setGitHubLoading] = useState(false);
 
   // Load API key from localStorage on mount
   useEffect(() => {
@@ -71,6 +65,84 @@ export default function Dashboard({ files, metrics, questions, gitHubData }: Das
       // localStorage not available
     }
   }, []);
+
+  // Fetch processed GitHub data for infinite game rounds
+  useEffect(() => {
+    if (!gitHubData) {
+      setGitHubRoundData(null);
+      return;
+    }
+    let cancelled = false;
+    setGitHubLoading(true);
+
+    async function buildGitHubRoundData() {
+      const gh = gitHubData as GitHubSource; // safe: we guard above
+      try {
+        // Get top source files from the repo
+        const repoFiles = await fetchRepoTree(
+          gh.owner,
+          gh.repo,
+          true,
+          gh.token
+        );
+        if (cancelled) return;
+
+        // Pick top 15 code files to get commit history for
+        const codeFilePaths = repoFiles
+          .filter(f => !f.path.includes('node_modules') && !f.path.includes('.git') && !f.path.includes('test') && !f.path.includes('spec'))
+          .slice(0, 15)
+          .map(f => f.path);
+
+        // Fetch commits for each file in parallel
+        const commitResults = await Promise.allSettled(
+          codeFilePaths.map(path =>
+            fetchFileCommits(gh.owner, gh.repo, path, gh.token)
+          )
+        );
+
+        if (cancelled) return;
+
+        const fileCommits: Record<string, string[]> = {};
+        const allCommitDates: string[] = [];
+        const fileAuthors: Record<string, string> = {};
+        let repoStart = new Date().toISOString();
+        let repoEnd = new Date(0).toISOString();
+
+        commitResults.forEach((result, i) => {
+          if (result.status !== 'fulfilled') return;
+          const commits = result.value;
+          if (commits.length === 0) return;
+          const path = codeFilePaths[i]!;
+          fileCommits[path] = commits.map(c => c.date);
+          allCommitDates.push(...commits.map(c => c.date));
+          fileAuthors[path] = commits[0]!.author;
+
+          for (const c of commits) {
+            if (c.date < repoStart) repoStart = c.date;
+            if (c.date > repoEnd) repoEnd = c.date;
+          }
+        });
+
+        if (!cancelled) {
+          setGitHubRoundData({
+            fileCommits,
+            allCommitDates,
+            fileAuthors,
+            repoStart,
+            repoEnd,
+          });
+        }
+      } catch (err) {
+        console.warn('[Unvibe] Failed to build GitHub round data:', err);
+        if (!cancelled) setGitHubRoundData(null);
+      } finally {
+        if (!cancelled) setGitHubLoading(false);
+      }
+    }
+
+    buildGitHubRoundData();
+    return () => { cancelled = true; };
+  }, [gitHubData]);
 
   // Save API key to localStorage when it changes
   const updateAiConfig = (config: typeof aiConfig) => {
@@ -139,23 +211,6 @@ export default function Dashboard({ files, metrics, questions, gitHubData }: Das
   };
 
   // Filter questions by selected game types
-  const allQuestions = [...questions, ...extraQuestions].filter(
-    q => selectedGameTypes.has(q.type)
-  );
-
-  const toggleGameType = (typeId: string) => {
-    setSelectedGameTypes(prev => {
-      const next = new Set(prev);
-      if (next.has(typeId)) {
-        if (next.size === 1) return prev; // keep at least one selected
-        next.delete(typeId);
-      } else {
-        next.add(typeId);
-      }
-      return next;
-    });
-  };
-
   return (
     <section style={{ padding: '80px 0 120px' }}>
       <div className="container">
@@ -483,57 +538,35 @@ export default function Dashboard({ files, metrics, questions, gitHubData }: Das
         {/* Games Tab */}
         {activeTab === 'games' && (
           <>
-            {/* Game type selector */}
-            <div className="card animate-fade-up" style={{ padding: '20px 24px', marginBottom: '24px' }}>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px', fontFamily: 'Outfit', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Choose Game Types
+            {/* Game type selector — all types always available in infinite mode */}
+            <div className="card animate-fade-up" style={{ padding: '16px 24px', marginBottom: '24px' }}>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px', fontFamily: 'Outfit', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Available Games
               </p>
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                {GAME_TYPES.map(game => {
-                  const isSelected = selectedGameTypes.has(game.id);
-                  const hasQuestions = allQuestions.some(q => q.type === game.id);
-                  return (
-                    <button
-                      key={game.id}
-                      onClick={() => toggleGameType(game.id)}
-                      style={{
-                        padding: '10px 16px',
-                        background: isSelected ? 'var(--accent-subtle)' : 'var(--bg-elevated)',
-                        border: `1px solid ${isSelected ? 'rgba(123,92,255,0.4)' : 'var(--border)'}`,
-                        borderRadius: 'var(--radius-md)',
-                        color: isSelected ? 'var(--accent)' : 'var(--text-muted)',
-                        cursor: 'pointer',
-                        fontSize: '13px',
-                        fontFamily: 'Outfit',
-                        fontWeight: 600,
-                        transition: 'all 0.2s',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                      }}
-                    >
-                      <span style={{ opacity: isSelected ? 1 : 0.5 }}>{game.label}</span>
-                      {hasQuestions && (
-                        <span style={{
-                          fontSize: '10px',
-                          padding: '2px 6px',
-                          background: isSelected ? 'var(--accent)' : 'var(--border)',
-                          color: isSelected ? '#fff' : 'var(--text-muted)',
-                          borderRadius: '10px',
-                          fontFamily: 'JetBrains Mono',
-                        }}>
-                          {allQuestions.filter(q => q.type === game.id).length}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
+                {GAME_TYPES.map(game => (
+                  <span key={game.id} style={{
+                    padding: '6px 14px',
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius-md)',
+                    color: 'var(--text-secondary)',
+                    fontSize: '12px',
+                    fontFamily: 'var(--font-jetbrains)',
+                  }}>
+                    {game.label}
+                  </span>
+                ))}
               </div>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '10px' }}>
+                Infinite mode — questions generated on demand. Select a game type in the games panel.
+              </p>
             </div>
 
             <Games
-              questions={allQuestions}
-              GAME_TYPES={GAME_TYPES}
+              files={files}
+              metrics={metrics}
+              gitHubData={gitHubRoundData ?? undefined}
               soloGame={soloGame}
               setSoloGame={setSoloGame}
             />
