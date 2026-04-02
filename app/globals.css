@@ -5,31 +5,52 @@
 }
 
 :root {
-  --bg-primary: #0D0D12;
-  --bg-secondary: #16161D;
-  --bg-elevated: #1E1E28;
-  --bg-card: #13131A;
-  --border: #2A2A36;
-  --border-subtle: #1E1E26;
-  --text-primary: #F0F0F5;
-  --text-secondary: #8B8B9E;
-  --text-muted: #5C5C6E;
-  --accent: #7B5CFF;
-  --accent-hover: #9480FF;
-  --accent-glow: rgba(123, 92, 255, 0.25);
-  --accent-subtle: rgba(123, 92, 255, 0.1);
-  --success: #34D399;
-  --success-subtle: rgba(52, 211, 153, 0.1);
-  --warning: #FBBF24;
-  --error: #F87171;
-  --gradient-accent: linear-gradient(135deg, #7B5CFF 0%, #5C8FFF 50%, #34D399 100%);
-  --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
-  --shadow-md: 0 8px 32px rgba(0,0,0,0.4);
-  --shadow-glow: 0 0 40px var(--accent-glow);
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
+  /* ─── VIM Editor Colors ──────────────────────────────────────────── */
+  --vim-bg: #1e1e1e;
+  --vim-fg: #d4d4d4;
+  --vim-comment: #6a9955;
+  --vim-keyword: #569cd6;
+  --vim-string: #ce9178;
+  --vim-number: #b5cea8;
+  --vim-function: #dcdcaa;
+  --vim-operator: #d4d4d4;
+  --vim-line-number: #858585;
+  --vim-cursor: #aeafad;
+  --vim-selection-bg: #264f78;
+  --vim-active-line: #2a2a2a;
+  --vim-border: #3c3c3c;
+  --vim-scrollbar: #424242;
+  --vim-gutter: #1e1e1e;
+
+  /* ─── Site Theme (mapped to VIM) ─────────────────────────────────── */
+  --bg-primary: var(--vim-bg);
+  --bg-secondary: #252526;
+  --bg-elevated: #2d2d2d;
+  --bg-card: #252526;
+  --text-primary: var(--vim-fg);
+  --text-secondary: #9d9d9d;
+  --text-muted: var(--vim-comment);
+  --accent: var(--vim-keyword);
+  --accent-hover: #6eb0f0;
+  --accent-subtle: rgba(86, 156, 214, 0.15);
+  --success: #22c55e;
+  --success-subtle: rgba(34, 197, 94, 0.1);
+  --warning: #fbbf24;
+  --error: #f14c4c;
+  --border: var(--vim-border);
+  --border-subtle: #333333;
+  --gradient-accent: linear-gradient(135deg, #569cd6, #6eb0f0);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.4);
+  --shadow-md: 0 8px 32px rgba(0,0,0,0.5);
+  --shadow-glow: 0 0 40px rgba(86, 156, 214, 0.15);
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+
+  /* ─── Legacy font variables (for compat) ─────────────────────────── */
+  --font-dm-sans: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --font-outfit: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --font-jetbrains: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
 }
 
 html {
@@ -37,48 +58,51 @@ html {
 }
 
 body {
-  font-family: var(--font-dm-sans), 'DM Sans', -apple-system, sans-serif;
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace !important;
+  background: var(--vim-bg) !important;
+  color: var(--vim-fg) !important;
   line-height: 1.6;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 
-h1, h2, h3, h4, h5 {
-  font-family: var(--font-outfit), 'Outfit', sans-serif;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
+* {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace !important;
 }
 
-code, .mono {
-  font-family: var(--font-jetbrains), 'JetBrains Mono', monospace;
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace !important;
+  font-weight: 700 !important;
+  color: var(--vim-fg) !important;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+code, .mono, pre {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace !important;
+}
+
+a {
+  color: var(--vim-keyword) !important;
+  text-decoration: none !important;
+}
+
+a:hover {
+  color: var(--accent-hover) !important;
 }
 
 ::selection {
-  background: var(--accent);
-  color: #fff;
+  background: var(--vim-selection-bg) !important;
 }
 
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
+/* ─── Scrollbar ──────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--vim-bg); }
+::-webkit-scrollbar-thumb { background: var(--vim-scrollbar); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #555; }
 
-::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
-}
-
+/* ─── Container ───────────────────────────────────────────────────── */
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -89,201 +113,157 @@ code, .mono {
   .container { padding: 0 20px; }
 }
 
-/* ---- Animations ---- */
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(24px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow), 0 0 20px rgba(123,92,255,0.15); }
-  50% { box-shadow: 0 0 0 8px transparent, 0 0 40px rgba(123,92,255,0.3); }
-}
-
-@keyframes border-flow {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-}
-
-@keyframes spin-slow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes count-up {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes success-burst {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-.animate-fade-up {
-  animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  opacity: 0;
-}
-
-.animate-float {
-  animation: float 4s ease-in-out infinite;
-}
-
-/* ---- Buttons ---- */
+/* ─── Buttons ─────────────────────────────────────────────────────── */
 .btn-primary {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 14px 28px;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-md);
-  font-family: 'Outfit', sans-serif;
-  font-weight: 600;
-  font-size: 15px;
+  padding: 12px 24px;
+  background: var(--vim-keyword) !important;
+  color: #1e1e1e !important;
+  border: 1px solid #3c3c3c !important;
+  border-radius: var(--radius-sm) !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.2s;
   text-decoration: none;
-  letter-spacing: -0.01em;
-  position: relative;
-  overflow: hidden;
-}
-
-.btn-primary::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
-  opacity: 0;
-  transition: opacity 0.25s;
 }
 
 .btn-primary:hover {
-  background: var(--accent-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(123,92,255,0.35);
-}
-
-.btn-primary:hover::before {
-  opacity: 1;
+  background: #6eb0f0 !important;
+  border-color: #6eb0f0 !important;
+  transform: translateY(-1px);
 }
 
 .btn-primary:active {
   transform: translateY(0);
 }
 
-.btn-primary:disabled,
-.btn-primary:disabled:hover {
-  opacity: 0.5;
+.btn-primary:disabled {
+  opacity: 0.4 !important;
   cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
+  transform: none !important;
 }
 
-.btn-ghost {
+.btn-ghost, .btn-secondary {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 14px 28px;
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  font-family: 'Outfit', sans-serif;
-  font-weight: 500;
-  font-size: 15px;
+  padding: 12px 24px;
+  background: var(--vim-bg) !important;
+  color: var(--vim-fg) !important;
+  border: 1px solid var(--vim-border) !important;
+  border-radius: var(--radius-sm) !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-weight: 500 !important;
+  font-size: 13px !important;
   cursor: pointer;
   transition: all 0.2s;
   text-decoration: none;
 }
 
-.btn-ghost:hover {
-  color: var(--text-primary);
-  border-color: var(--text-muted);
-  background: var(--bg-elevated);
+.btn-ghost:hover, .btn-secondary:hover {
+  border-color: var(--vim-keyword) !important;
+  color: var(--vim-keyword) !important;
 }
 
-/* ---- Cards ---- */
+/* ─── Cards ───────────────────────────────────────────────────────── */
 .card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  transition: all 0.3s ease;
+  background: #252526 !important;
+  border: 1px solid var(--vim-border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: none !important;
+  transition: border-color 0.2s;
 }
 
 .card:hover {
-  border-color: var(--border);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  border-color: var(--vim-keyword) !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
-/* ---- Badges ---- */
+/* ─── Inputs ──────────────────────────────────────────────────────── */
+input, select, textarea {
+  background: var(--vim-bg) !important;
+  border: 1px solid var(--vim-border) !important;
+  color: var(--vim-fg) !important;
+  border-radius: var(--radius-sm) !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 13px !important;
+  padding: 8px 12px !important;
+  outline: none !important;
+  transition: border-color 0.15s;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--vim-keyword) !important;
+  outline: 1px solid var(--vim-keyword) !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--vim-line-number) !important;
+}
+
+/* ─── Navbar ──────────────────────────────────────────────────────── */
+nav, .navbar, header {
+  background: var(--vim-bg) !important;
+  border-bottom: 1px solid var(--vim-border) !important;
+  backdrop-filter: none !important;
+}
+
+nav a, .navbar a, header a {
+  color: var(--vim-comment) !important;
+  text-decoration: none !important;
+}
+
+nav a:hover, .navbar a:hover, header a:hover {
+  color: var(--vim-fg) !important;
+}
+
+/* ─── Footer ──────────────────────────────────────────────────────── */
+footer {
+  background: var(--vim-bg) !important;
+  border-top: 1px solid var(--vim-border) !important;
+  color: var(--vim-comment) !important;
+}
+
+/* ─── Badges ──────────────────────────────────────────────────────── */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
-  background: var(--accent-subtle);
-  border: 1px solid rgba(123,92,255,0.2);
+  padding: 4px 12px;
+  background: rgba(86, 156, 214, 0.1) !important;
+  border: 1px solid rgba(86, 156, 214, 0.2) !important;
   border-radius: 100px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11px !important;
   font-weight: 500;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  color: var(--vim-keyword) !important;
+  letter-spacing: 0.05em;
 }
 
-.badge::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  background: var(--accent);
-  border-radius: 50%;
-  animation: pulse-glow 2s ease-in-out infinite;
-}
-
-/* ---- Gradient text ---- */
+/* ─── Gradient text ───────────────────────────────────────────────── */
 .gradient-text {
-  background: var(--gradient-accent);
+  background: linear-gradient(90deg, #569cd6, #6eb0f0, #34d399);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* ---- Section spacing ---- */
+/* ─── Section spacing ─────────────────────────────────────────────── */
 .section {
-  padding: 120px 0;
+  padding: 80px 0;
 }
 
 @media (max-width: 768px) {
-  .section { padding: 80px 0; }
+  .section { padding: 60px 0; }
 }
 
-/* ---- Noise overlay ---- */
-.noise-overlay {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 9999;
-  opacity: 0.025;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-}
-
-/* ---- Grid layouts ---- */
+/* ─── Grid layouts ─────────────────────────────────────────────────── */
 .grid-3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -304,62 +284,144 @@ code, .mono {
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
 }
 
-/* ---- Icon wrappers ---- */
+/* ─── Stat cards ──────────────────────────────────────────────────── */
+.stat-card {
+  background: #252526 !important;
+  border: 1px solid var(--vim-border) !important;
+  border-radius: var(--radius-md) !important;
+  padding: 16px !important;
+}
+
+/* ─── Tab buttons ─────────────────────────────────────────────────── */
+[role="tab"], .tab-btn {
+  background: transparent !important;
+  color: var(--vim-comment) !important;
+  border: 1px solid transparent !important;
+  border-radius: var(--radius-sm) !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 12px !important;
+  cursor: pointer;
+  transition: all 0.15s;
+  padding: 6px 14px !important;
+}
+
+[role="tab"][aria-selected="true"], .tab-btn.active {
+  background: #2d2d2d !important;
+  color: var(--vim-fg) !important;
+  border-color: var(--vim-border) !important;
+}
+
+/* ─── Drop zone ────────────────────────────────────────────────────── */
+.drop-zone {
+  border: 2px dashed var(--vim-border) !important;
+  background: transparent !important;
+  border-radius: var(--radius-md) !important;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.drop-zone:hover {
+  border-color: var(--vim-keyword) !important;
+}
+
+/* ─── Timeline (function-age game) ────────────────────────────────── */
+.timeline-scale {
+  background: linear-gradient(180deg, #1a1a1a 0%, #222 100%) !important;
+  border: 1px solid var(--vim-border) !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+/* ─── Charts ──────────────────────────────────────────────────────── */
+.recharts-wrapper { background: transparent !important; }
+.recharts-cartesian-axis-tick-value {
+  fill: var(--vim-comment) !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11px !important;
+}
+.recharts-tooltip-wrapper { z-index: 100; }
+.recharts-default-tooltip {
+  background: #2d2d2d !important;
+  border: 1px solid var(--vim-border) !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+/* ─── Icon boxes ──────────────────────────────────────────────────── */
 .icon-box {
-  width: 48px;
-  height: 48px;
-  background: var(--accent-subtle);
-  border: 1px solid rgba(123,92,255,0.15);
-  border-radius: var(--radius-md);
+  width: 40px;
+  height: 40px;
+  background: rgba(86, 156, 214, 0.1) !important;
+  border: 1px solid rgba(86, 156, 214, 0.2) !important;
+  border-radius: var(--radius-md) !important;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  color: var(--vim-keyword);
 }
 
-/* ---- Divider ---- */
+/* ─── Divider ─────────────────────────────────────────────────────── */
 .divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--border), transparent);
+  background: var(--vim-border) !important;
   margin: 0;
 }
 
-/* ============================================================
-   VIM THEME — Games Terminal Aesthetic
-   ============================================================ */
-
-.vim-theme {
-  --vim-bg: #1e1e1e;
-  --vim-fg: #d4d4d4;
-  --vim-comment: #6a9955;
-  --vim-keyword: #569cd6;
-  --vim-string: #ce9178;
-  --vim-number: #b5cea8;
-  --vim-function: #dcdcaa;
-  --vim-operator: #d4d4d4;
-  --vim-line-number: #858585;
-  --vim-cursor: #aeafad;
-  --vim-selection-bg: #264f78;
-  --vim-active-line-bg: #2a2a2a;
-  --vim-border: #3c3c3c;
-  --vim-scrollbar: #424242;
-  --vim-gutter: #1e1e1e;
+/* ─── Animations ─────────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* Games section terminal wrapper */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes vim-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+/* ─── Inline code ─────────────────────────────────────────────────── */
+code, pre {
+  font-family: 'JetBrains Mono', monospace !important;
+  background: #1a1a1a !important;
+  color: var(--vim-string) !important;
+  border-radius: var(--radius-sm) !important;
+  font-size: 12px !important;
+}
+
+pre {
+  padding: 12px !important;
+  overflow-x: auto;
+}
+
+/* ─── Games Terminal (vim-theme / vim-terminal) ───────────────────── */
+.vim-theme {
+  background: transparent !important;
+}
+
 .vim-terminal {
-  background: var(--vim-bg);
-  border: 1px solid var(--vim-border);
-  border-radius: 8px;
+  background: #1e1e1e !important;
+  border: 1px solid var(--vim-border) !important;
+  border-radius: var(--radius-md) !important;
   overflow: hidden;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 13px;
   color: var(--vim-fg);
 }
 
 /* Terminal title bar */
 .vim-titlebar {
-  background: var(--vim-active-line-bg);
+  background: var(--vim-active-line);
   border-bottom: 1px solid var(--vim-border);
   padding: 8px 12px;
   display: flex;
@@ -380,41 +442,16 @@ code, .mono {
   color: var(--vim-line-number);
 }
 
-/* Terminal content area */
+/* Terminal content */
 .vim-content {
   padding: 20px;
 }
 
-/* Terminal prompt style */
-.vim-prompt {
-  color: var(--vim-function);
-}
-
-.vim-prompt::before {
-  content: '➜ ';
-  color: var(--vim-keyword);
-}
-
-.vim-cmd {
-  color: var(--vim-fg);
-}
-
-.vim-cmd::after {
-  content: '█';
-  color: var(--vim-cursor);
-  animation: vim-blink 1s step-end infinite;
-}
-
-@keyframes vim-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-/* Score display */
+/* Score echo */
 .vim-echo {
-  background: var(--vim-active-line-bg);
+  background: var(--vim-active-line);
   border: 1px solid var(--vim-border);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   padding: 12px 16px;
   margin: 16px 0;
   font-family: 'JetBrains Mono', monospace;
@@ -426,12 +463,13 @@ code, .mono {
   margin-bottom: 4px;
 }
 
-/* Game card (terminal window) */
+/* Game card */
 .vim-card {
   background: var(--vim-bg);
   border: 1px solid var(--vim-border);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
+  margin-bottom: 20px;
   transition: border-color 0.2s;
 }
 
@@ -440,7 +478,7 @@ code, .mono {
 }
 
 .vim-card-header {
-  background: var(--vim-active-line-bg);
+  background: var(--vim-active-line);
   border-bottom: 1px solid var(--vim-border);
   padding: 6px 12px;
   font-size: 11px;
@@ -450,11 +488,11 @@ code, .mono {
   align-items: center;
 }
 
-/* Buttons styled as commands */
+/* vim buttons */
 .vim-btn {
   background: transparent;
   border: 1px solid var(--vim-border);
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   color: var(--vim-keyword);
   padding: 6px 14px;
   font-family: 'JetBrains Mono', monospace;
@@ -465,7 +503,7 @@ code, .mono {
 
 .vim-btn:hover:not(:disabled) {
   border-color: var(--vim-keyword);
-  background: var(--vim-active-line-bg);
+  background: var(--vim-active-line);
 }
 
 .vim-btn:disabled {
@@ -474,68 +512,53 @@ code, .mono {
 }
 
 .vim-btn-primary {
-  background: var(--vim-keyword);
-  color: var(--vim-bg);
-  border-color: var(--vim-keyword);
+  background: var(--vim-keyword) !important;
+  color: #1e1e1e !important;
+  border-color: var(--vim-keyword) !important;
 }
 
 .vim-btn-primary:hover:not(:disabled) {
-  background: #6fb0e8;
-  border-color: #6fb0e8;
+  background: #6fb0e8 !important;
+  border-color: #6fb0e8 !important;
 }
 
-/* Game selector styled as :set command */
+/* Game selector */
 .vim-set-selector {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
+  flex-wrap: wrap;
 }
 
 .vim-set-label {
   color: var(--vim-comment);
+  margin-right: 4px;
 }
 
 .vim-set-value {
   color: var(--vim-string);
-  background: var(--vim-active-line-bg);
+  background: var(--vim-active-line);
   border: 1px solid var(--vim-border);
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   padding: 2px 8px;
   cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  transition: all 0.15s;
 }
 
 .vim-set-value:hover {
   border-color: var(--vim-keyword);
 }
 
-/* Progress bar */
-.vim-progress {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  color: var(--vim-line-number);
-  margin: 8px 0;
-}
-
-.vim-progress-bar {
-  display: inline-block;
-}
-
-.vim-progress-filled {
-  color: var(--vim-function);
-}
-
-.vim-progress-empty {
-  color: var(--vim-border);
-}
-
-/* Answer options styled as vim choices */
+/* Answer options */
 .vim-option {
   background: var(--vim-bg);
   border: 1px solid var(--vim-border);
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   padding: 10px 14px;
   margin: 6px 0;
   cursor: pointer;
@@ -546,26 +569,28 @@ code, .mono {
   font-family: 'JetBrains Mono', monospace;
   font-size: 13px;
   color: var(--vim-fg);
+  width: 100%;
+  text-align: left;
 }
 
-.vim-option:hover:not(:disabled):not(.vim-option-selected) {
+.vim-option:hover:not(:disabled) {
   border-color: var(--vim-keyword);
-  background: var(--vim-active-line-bg);
+  background: rgba(86, 156, 214, 0.05);
 }
 
 .vim-option-selected {
-  border-color: var(--vim-keyword);
-  background: rgba(86, 156, 214, 0.15);
+  border-color: var(--vim-keyword) !important;
+  background: rgba(86, 156, 214, 0.15) !important;
 }
 
 .vim-option-correct {
-  border-color: var(--vim-number);
-  background: rgba(181, 206, 168, 0.15);
+  border-color: var(--vim-number) !important;
+  background: rgba(181, 206, 168, 0.1) !important;
 }
 
 .vim-option-wrong {
-  border-color: #f14c4c;
-  background: rgba(241, 76, 76, 0.1);
+  border-color: #f14c4c !important;
+  background: rgba(241, 76, 76, 0.1) !important;
 }
 
 .vim-option-letter {
@@ -578,11 +603,92 @@ code, .mono {
   flex: 1;
 }
 
+/* Difficulty badge */
+.vim-difficulty {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-left: 8px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.vim-difficulty-easy {
+  background: rgba(181, 206, 168, 0.15);
+  color: var(--vim-number);
+  border: 1px solid rgba(181, 206, 168, 0.25);
+}
+
+.vim-difficulty-medium {
+  background: rgba(206, 145, 120, 0.15);
+  color: var(--vim-string);
+  border: 1px solid rgba(206, 145, 120, 0.25);
+}
+
+.vim-difficulty-hard {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f14c4c;
+  border: 1px solid rgba(248, 113, 113, 0.25);
+}
+
+/* Result display */
+.vim-result {
+  background: var(--vim-active-line);
+  border: 1px solid var(--vim-border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.vim-result-correct {
+  border-color: var(--vim-number) !important;
+}
+
+.vim-result-wrong {
+  border-color: #f14c4c !important;
+}
+
+.vim-result-points {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--vim-function);
+}
+
+/* Code snippet in terminal */
+.vim-code {
+  background: var(--vim-bg);
+  border: 1px solid var(--vim-border);
+  border-radius: var(--radius-sm);
+  margin: 12px 0;
+  overflow: hidden;
+}
+
+.vim-code-header {
+  background: var(--vim-active-line);
+  border-bottom: 1px solid var(--vim-border);
+  padding: 6px 12px;
+  font-size: 11px;
+  color: var(--vim-line-number);
+  display: flex;
+  justify-content: space-between;
+}
+
+.vim-code-content {
+  padding: 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--vim-fg);
+  overflow-x: auto;
+  white-space: pre;
+}
+
 /* Timeline for function-age game */
 .vim-timeline {
   background: var(--vim-bg);
   border: 1px solid var(--vim-border);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   padding: 16px;
   margin: 16px 0;
 }
@@ -601,115 +707,15 @@ code, .mono {
   margin-top: 6px;
 }
 
-.vim-timeline-tooltip {
-  position: absolute;
-  background: var(--vim-active-line-bg);
-  border: 1px solid var(--vim-border);
-  border-radius: 3px;
-  padding: 6px 10px;
-  font-size: 11px;
-  color: var(--vim-fg);
-  pointer-events: none;
-  z-index: 10;
-}
-
 .vim-timeline-label {
-  background: var(--vim-active-line-bg);
+  background: var(--vim-active-line);
   border: 1px solid var(--vim-border);
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   padding: 4px 10px;
   font-size: 11px;
   color: var(--vim-function);
   margin-bottom: 12px;
   display: inline-block;
-}
-
-/* Code snippet in terminal */
-.vim-code {
-  background: var(--vim-bg);
-  border: 1px solid var(--vim-border);
-  border-radius: 3px;
-  margin: 12px 0;
-  overflow: hidden;
-}
-
-.vim-code-header {
-  background: var(--vim-active-line-bg);
-  border-bottom: 1px solid var(--vim-border);
-  padding: 6px 12px;
-  font-size: 11px;
-  color: var(--vim-line-number);
-  display: flex;
-  justify-content: space-between;
-}
-
-.vim-code-content {
-  padding: 14px;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--vim-fg);
-  overflow-x: auto;
-  white-space: pre;
-}
-
-/* Syntax highlighting */
-.vim-keyword { color: var(--vim-keyword); }
-.vim-string { color: var(--vim-string); }
-.vim-number { color: var(--vim-number); }
-.vim-function { color: var(--vim-function); }
-.vim-comment { color: var(--vim-comment); }
-.vim-operator { color: var(--vim-operator); }
-
-/* Difficulty badge */
-.vim-difficulty {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 3px;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-left: 8px;
-}
-
-.vim-difficulty-easy {
-  background: rgba(181, 206, 168, 0.2);
-  color: var(--vim-number);
-  border: 1px solid rgba(181, 206, 168, 0.3);
-}
-
-.vim-difficulty-medium {
-  background: rgba(206, 145, 120, 0.2);
-  color: var(--vim-string);
-  border: 1px solid rgba(206, 145, 120, 0.3);
-}
-
-.vim-difficulty-hard {
-  background: rgba(248, 113, 113, 0.2);
-  color: #f14c4c;
-  border: 1px solid rgba(248, 113, 113, 0.3);
-}
-
-/* Result display */
-.vim-result {
-  background: var(--vim-active-line-bg);
-  border: 1px solid var(--vim-border);
-  border-radius: 4px;
-  padding: 16px;
-  margin: 16px 0;
-}
-
-.vim-result-correct {
-  border-color: var(--vim-number);
-}
-
-.vim-result-wrong {
-  border-color: #f14c4c;
-}
-
-.vim-result-points {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--vim-function);
 }
 
 /* Empty state */
@@ -727,78 +733,7 @@ code, .mono {
   margin-bottom: 8px;
 }
 
-/* Game tabs */
-.vim-tabs {
-  display: flex;
-  gap: 2px;
-  margin-bottom: 16px;
-  border-bottom: 1px solid var(--vim-border);
-  padding-bottom: 2px;
-}
-
-.vim-tab {
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--vim-line-number);
-  padding: 8px 16px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.vim-tab:hover {
-  color: var(--vim-fg);
-}
-
-.vim-tab-active {
-  color: var(--vim-keyword);
-  border-bottom-color: var(--vim-keyword);
-}
-
-/* Score summary line */
-.vim-score-summary {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  color: var(--vim-comment);
-  padding: 8px 12px;
-  background: var(--vim-active-line-bg);
-  border-radius: 4px;
-  margin: 12px 0;
-}
-
-.vim-score-value {
-  color: var(--vim-function);
-}
-
-/* Answer reveal lines */
-.vim-reveal {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 8px 0;
-  font-size: 12px;
-}
-
-.vim-reveal-line {
-  width: 2px;
-  height: 20px;
-}
-
-.vim-reveal-correct {
-  background: #22c55e;
-}
-
-.vim-reveal-guess {
-  background: var(--vim-keyword);
-}
-
-.vim-reveal-label {
-  color: var(--vim-line-number);
-}
-
-/* Next round button */
+/* Next round */
 .vim-next {
   display: flex;
   align-items: center;
@@ -807,7 +742,9 @@ code, .mono {
   margin-top: 16px;
 }
 
-.vim-next::before {
-  content: ':';
-  color: var(--vim-keyword);
+/* ─── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  * { font-size: 14px !important; }
+  h1 { font-size: clamp(28px, 6vw, 48px) !important; }
+  .vim-set-selector { gap: 2px; }
 }

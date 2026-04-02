@@ -3,8 +3,8 @@
 import { useState, useCallback, useRef } from 'react';
 import type { FileInfo, ComplexityMetrics, GameQuestion } from '@/lib/types';
 import { parseArchive, calculateMetrics, generateStaticQuestions } from '@/lib/parser';
-import { Upload, Shield, Zap } from 'lucide-react';
 import GitHubInput from './GitHubInput';
+
 interface GitHubSource {
   owner: string;
   repo: string;
@@ -74,219 +74,229 @@ export default function Hero({ onDataLoaded }: HeroProps) {
       paddingTop: '80px',
       position: 'relative',
       overflow: 'hidden',
+      background: 'var(--vim-bg)',
     }}>
-      {/* Background gradient */}
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        background: `
-          radial-gradient(ellipse 80% 60% at 50% -10%, rgba(123, 92, 255, 0.18) 0%, transparent 60%),
-          radial-gradient(ellipse 60% 40% at 80% 80%, rgba(52, 211, 153, 0.06) 0%, transparent 50%)
-        `,
-        pointerEvents: 'none',
-      }} />
-
-      {/* Grid pattern */}
+      {/* Subtle grid pattern */}
       <div style={{
         position: 'absolute',
         inset: 0,
         backgroundImage: `
-          linear-gradient(rgba(123,92,255,0.04) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(123,92,255,0.04) 1px, transparent 1px)
+          linear-gradient(rgba(86, 156, 214, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(86, 156, 214, 0.03) 1px, transparent 1px)
         `,
-        backgroundSize: '60px 60px',
-        maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 70%)',
+        backgroundSize: '40px 40px',
         pointerEvents: 'none',
+      }} />
+
+      {/* Cursor blink accent */}
+      <div style={{
+        position: 'absolute',
+        top: '15%',
+        right: '10%',
+        width: '2px',
+        height: '60px',
+        background: 'var(--vim-keyword)',
+        animation: 'vim-blink 1s step-end infinite',
+        opacity: 0.3,
       }} />
 
       <div className="container" style={{ width: '100%', position: 'relative', zIndex: 1 }}>
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-          <div className="badge animate-fade-up" style={{ marginBottom: '24px', animationDelay: '0ms' }}>
-            Open Source · Client-Side · AI-Powered
+        <div style={{ marginBottom: '40px' }}>
+          {/* Comment-style header */}
+          <div style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: '12px',
+            color: 'var(--vim-comment)',
+            marginBottom: '16px',
+            lineHeight: 1.8,
+          }}>
+            <div>{"// unvibe — codebase exploration through games"}</div>
+            <div>{"// open source · client-side only · no data leaves your browser"}</div>
           </div>
 
-          <h1 className="animate-fade-up" style={{
-            fontFamily: 'var(--font-outfit)',
-            fontSize: 'clamp(42px, 7vw, 80px)',
-            fontWeight: 800,
-            lineHeight: 1.05,
-            letterSpacing: '-0.03em',
+          {/* Main title — vim style */}
+          <h1 style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 'clamp(32px, 5vw, 64px)',
+            fontWeight: 700,
+            lineHeight: 1.1,
+            letterSpacing: '-0.02em',
             marginBottom: '20px',
-            animationDelay: '80ms',
+            color: 'var(--vim-fg)',
           }}>
-            Decode Your
+            <span style={{ color: 'var(--vim-comment)' }}>~</span>
+            {' Decode your '}
+            <span style={{ color: 'var(--vim-keyword)' }}>codebase</span>
             <br />
-            <span className="gradient-text">Codebase</span>
-            <br />
-            Through Play
+            <span style={{ color: 'var(--vim-comment)' }}>{'->'}</span>
+            {' through '}
+            <span style={{
+              background: 'linear-gradient(90deg, #569cd6, #6eb0f0, #34d399)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}>play</span>
           </h1>
 
-          <p className="animate-fade-up" style={{
-            fontSize: '18px',
-            color: 'var(--text-secondary)',
-            maxWidth: '520px',
-            margin: '0 auto 40px',
+          <p style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: '14px',
+            color: 'var(--vim-comment)',
+            maxWidth: '540px',
+            marginBottom: '32px',
             lineHeight: 1.7,
-            animationDelay: '160ms',
           }}>
-            Upload any project archive or paste a GitHub URL. Get instant insights. Turn your code into games your team will actually want to play.
+            Upload any project archive or paste a GitHub URL.
+            Get instant insights. Turn your code into games your team will actually want to play.
           </p>
 
-          <div className="animate-fade-up" style={{
+          {/* Feature flags in vim style */}
+          <div style={{
             display: 'flex',
-            gap: '32px',
-            justifyContent: 'center',
+            gap: '16px',
             flexWrap: 'wrap',
-            animationDelay: '240ms',
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: '12px',
           }}>
             {[
-              { icon: Shield, label: '100% Private', desc: 'Your code never leaves the browser' },
-              { icon: Zap, label: 'Any Language', desc: 'JS, Python, Rust, Go, anything' },
-              { icon: Shield, label: 'Games from Code', desc: 'Learn your codebase through play' },
-            ].map(({ icon: Icon, label, desc }) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{
-                  width: '36px', height: '36px',
-                  background: 'var(--accent-subtle)',
-                  border: '1px solid rgba(123,92,255,0.2)',
-                  borderRadius: '10px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0,
-                }}>
-                  <Icon size={16} color="var(--accent)" />
-                </div>
-                <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-outfit)' }}>{label}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{desc}</div>
-                </div>
-              </div>
+              { label: 'private', desc: '100% client-side' },
+              { label: 'any-lang', desc: 'JS, Python, Rust, Go...' },
+              { label: 'games', desc: 'learn by playing' },
+            ].map(({ label, desc }) => (
+              <span key={label} style={{
+                color: 'var(--vim-comment)',
+                background: 'var(--vim-active-line)',
+                border: '1px solid var(--vim-border)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '4px 10px',
+              }}>
+                <span style={{ color: 'var(--vim-keyword)' }}>[</span>
+                {label}
+                <span style={{ color: 'var(--vim-keyword)' }}>]</span>
+                <span style={{ color: 'var(--vim-line-number)', marginLeft: '6px' }}>// {desc}</span>
+              </span>
             ))}
           </div>
         </div>
 
-        {/* Source Toggle */}
-        <div className="animate-fade-up" style={{
+        {/* Source toggle :set command style */}
+        <div style={{
           display: 'flex',
           gap: '4px',
-          background: 'var(--bg-secondary)',
-          borderRadius: 'var(--radius-md)',
-          padding: '4px',
-          width: 'fit-content',
-          margin: '0 auto 16px',
-          border: '1px solid var(--border-subtle)',
-          animationDelay: '300ms',
+          marginBottom: '16px',
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: '12px',
         }}>
+          <span style={{ color: 'var(--vim-comment)', marginRight: '8px' }}>:set source=</span>
           {[
-            { id: 'zip' as const, label: '📦 Upload Archive' },
-            { id: 'github' as const, label: '🔗 GitHub URL' },
+            { id: 'zip' as const, label: 'zip' },
+            { id: 'github' as const, label: 'github' },
           ].map(({ id, label }) => (
-            <button
+            <span
               key={id}
               onClick={() => setActiveSource(id)}
               style={{
-                padding: '10px 20px',
-                background: activeSource === id ? 'var(--bg-elevated)' : 'transparent',
-                border: 'none',
-                borderRadius: '8px',
-                color: activeSource === id ? 'var(--text-primary)' : 'var(--text-muted)',
+                color: activeSource === id ? 'var(--vim-keyword)' : 'var(--vim-string)',
+                background: activeSource === id ? 'rgba(86,156,214,0.1)' : 'transparent',
+                border: `1px solid ${activeSource === id ? 'var(--vim-keyword)' : 'var(--vim-border)'}`,
+                borderRadius: 'var(--radius-sm)',
+                padding: '3px 10px',
                 cursor: 'pointer',
-                fontFamily: 'var(--font-outfit)',
-                fontWeight: 600,
-                fontSize: '14px',
-                transition: 'all 0.2s',
+                fontSize: '11px',
               }}
             >
               {label}
-            </button>
+            </span>
           ))}
         </div>
 
-        {/* Drop Zone / GitHub Input */}
-        <div className="animate-fade-up" style={{ maxWidth: '720px', margin: '0 auto', animationDelay: '320ms' }}>
+        {/* Drop zone / GitHub Input */}
+        <div style={{ maxWidth: '720px' }}>
           {activeSource === 'zip' ? (
             <div
               onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
               onDragLeave={() => setDragging(false)}
               onDrop={onDrop}
               onClick={() => !loading && inputRef.current?.click()}
+              className="drop-zone"
               style={{
-                border: `2px dashed ${dragging ? 'var(--accent)' : loading ? 'var(--accent)' : 'var(--border)'}`,
-                borderRadius: 'var(--radius-xl)',
-                padding: '64px 48px',
+                border: `2px dashed ${dragging ? 'var(--vim-keyword)' : loading ? 'var(--vim-keyword)' : 'var(--vim-border)'}`,
+                borderRadius: 'var(--radius-md)',
+                padding: '48px 32px',
                 textAlign: 'center',
-                background: dragging
-                  ? 'rgba(123,92,255,0.06)'
-                  : loading
-                    ? 'rgba(123,92,255,0.04)'
-                    : 'var(--bg-card)',
-                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                background: dragging ? 'rgba(86,156,214,0.04)' : 'transparent',
                 cursor: loading ? 'default' : 'pointer',
-                boxShadow: dragging ? '0 0 60px rgba(123,92,255,0.2)' : 'none',
+                transition: 'all 0.2s',
               }}
             >
               {loading ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                  {/* Spinner */}
                   <div style={{
-                    width: '64px', height: '64px',
-                    border: '2px solid rgba(123,92,255,0.2)',
-                    borderTopColor: 'var(--accent)',
+                    width: '32px', height: '32px',
+                    border: '2px solid rgba(86,156,214,0.2)',
+                    borderTopColor: 'var(--vim-keyword)',
                     borderRadius: '50%',
                     animation: 'spin 0.8s linear infinite',
                   }} />
-                  <p style={{ fontFamily: 'var(--font-outfit)', fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    Analyzing your codebase...
-                  </p>
-                  <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-                    Extracting files, measuring complexity, building games
-                  </p>
+                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '13px', color: 'var(--vim-fg)' }}>
+                    <span style={{ color: 'var(--vim-keyword)' }}>$</span>
+                    {' '}analyzing codebase...
+                  </div>
+                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: 'var(--vim-comment)' }}>
+                    extracting files, measuring complexity, building games
+                  </div>
                 </div>
               ) : (
-                <>
+                <div>
+                  {/* Terminal prompt style */}
                   <div style={{
-                    width: '72px', height: '72px',
-                    background: 'var(--accent-subtle)',
-                    border: '1px solid rgba(123,92,255,0.2)',
-                    borderRadius: '20px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    margin: '0 auto 24px',
-                    transition: 'transform 0.3s',
-                    transform: dragging ? 'scale(1.1)' : 'scale(1)',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: '13px',
+                    color: 'var(--vim-function)',
+                    marginBottom: '16px',
                   }}>
-                    <Upload size={28} color="var(--accent)" />
+                    <span style={{ color: 'var(--vim-keyword)' }}>$</span>
+                    {' '}
+                    <span style={{ color: 'var(--vim-fg)' }}>drop archive here</span>
+                    <span style={{
+                      display: 'inline-block',
+                      width: '8px',
+                      height: '14px',
+                      background: 'var(--vim-cursor)',
+                      marginLeft: '2px',
+                      verticalAlign: 'middle',
+                      animation: 'vim-blink 1s step-end infinite',
+                    }} />
                   </div>
 
-                  <h3 style={{
-                    fontFamily: 'var(--font-outfit)',
-                    fontSize: '22px',
-                    fontWeight: 700,
-                    marginBottom: '8px',
-                    color: dragging ? 'var(--accent)' : 'var(--text-primary)',
-                    transition: 'color 0.2s',
+                  <div style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: '12px',
+                    color: 'var(--vim-comment)',
+                    marginBottom: '20px',
                   }}>
-                    {dragging ? 'Release to upload' : 'Drop your archive here'}
-                  </h3>
+                    or click to browse · zip, tar, gz supported
+                  </div>
 
-                  <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '28px' }}>
-                    {dragging ? 'Let go and watch the magic happen' : 'or click to browse · zip, tar, gz supported'}
-                  </p>
-
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  {/* File type tags */}
+                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
                     {['.zip', '.tar', '.gz', '.tar.gz'].map(ext => (
                       <span key={ext} style={{
-                        padding: '5px 12px',
-                        background: 'var(--bg-elevated)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontFamily: 'var(--font-jetbrains)',
-                        color: 'var(--text-muted)',
+                        padding: '4px 10px',
+                        background: 'var(--vim-active-line)',
+                        border: '1px solid var(--vim-border)',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: '11px',
+                        fontFamily: "'JetBrains Mono', monospace",
+                        color: 'var(--vim-string)',
                       }}>
                         {ext}
                       </span>
                     ))}
                   </div>
-                </>
+                </div>
               )}
 
               <input
@@ -298,7 +308,7 @@ export default function Hero({ onDataLoaded }: HeroProps) {
               />
             </div>
           ) : (
-            <div className="card" style={{ padding: '32px' }}>
+            <div className="card" style={{ padding: '24px' }}>
               <GitHubInput onDataLoaded={handleGitHubData} onError={handleGitHubError} />
             </div>
           )}
@@ -306,31 +316,49 @@ export default function Hero({ onDataLoaded }: HeroProps) {
           {error && (
             <div style={{
               marginTop: '16px',
-              padding: '14px 20px',
-              background: 'rgba(248,113,113,0.08)',
-              border: '1px solid rgba(248,113,113,0.2)',
-              borderRadius: 'var(--radius-md)',
-              fontSize: '14px',
+              padding: '12px 16px',
+              background: 'rgba(241, 76, 76, 0.08)',
+              border: '1px solid rgba(241, 76, 76, 0.25)',
+              borderRadius: 'var(--radius-sm)',
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: '12px',
               color: 'var(--error)',
-              textAlign: 'left',
             }}>
-              {error}
+              <span style={{ color: 'var(--vim-keyword)' }}>E:</span> {error}
             </div>
           )}
 
-          <p style={{ marginTop: '20px', fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-            <Shield size={13} />
-            Your code never leaves this browser — analysis runs 100% client-side
-            <span style={{ margin: '0 4px' }}>·</span>
-            <a href="https://github.com/nanachichan3/unvibe" target="_blank" rel="noopener" style={{ color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              Open Source
+          {/* Privacy note */}
+          <div style={{
+            marginTop: '16px',
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: '11px',
+            color: 'var(--vim-comment)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}>
+            <span style={{ color: 'var(--vim-keyword)' }}>//</span>
+            your code never leaves this browser
+            <span style={{ color: 'var(--vim-border)', margin: '0 4px' }}>|</span>
+            <a
+              href="https://github.com/nanachichan3/unvibe"
+              target="_blank"
+              rel="noopener"
+              style={{ color: 'var(--vim-keyword)', textDecoration: 'none' }}
+            >
+              github.com/nanachichan3/unvibe
             </a>
-          </p>
+          </div>
         </div>
       </div>
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes vim-blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
       `}</style>
     </section>
   );

@@ -766,27 +766,56 @@ function generateDependencyPathQuestion(
   rand: () => number,
   difficulty: 'easy' | 'medium' | 'hard',
 ): import('./types').GameQuestion {
-  const pairs = inferDependencyPairs(files);
-  if (pairs.length === 0) {
-    return makeFallbackQuestion(id, 'dependency-path', 'No clear import relationships found in this codebase.', rand, difficulty);
+  // Find files that are likely imported by others (util files, index files, shared modules, etc.)
+  // Use path-based heuristics — NO content scanning for performance
+  const utilFiles = files.filter(f =>
+    /\/(utils?|helpers?|lib|common|shared|components?|hooks?|services?|store|types?|interfaces?|constants?|assets?|images?|styles?|css)\//i.test(f.path) ||
+    /^(utils|helpers|lib|common|shared|components?|hooks?|services?|store|types?|interfaces?|constants?|assets?|images?)\//i.test(f.name) ||
+    /^index\.(ts|tsx|js|jsx)$/i.test(f.name) ||
+    /^(config|settings|types|constants|utils)\.[jt]sx?$/i.test(f.name)
+  );
+
+  const importers = files.filter(f => !utilFiles.includes(f));
+
+  if (utilFiles.length === 0 || importers.length === 0) {
+    return makeFallbackQuestion(id, 'dependency-path', 'Need more files to trace dependencies.', rand, difficulty);
   }
-  const [targetFile, importers] = pairs[Math.floor(rand() * pairs.length)!];
-  if (importers.length === 0) {
-    return makeFallbackQuestion(id, 'dependency-path', 'No clear import relationships found.', rand, difficulty);
-  }
-  const correctImporter = importers[Math.floor(rand() * importers.length)!];
-  const allNames = files.map(f => f.name).filter(n => n !== correctImporter && n !== targetFile);
-  const wrongFiles = getRandomItemsSeeded(allNames, 3, rand);
+
+  // Pick a random target util file
+  const target = utilFiles[Math.floor(rand() * utilFiles.length)!];
+  const targetName = target.name;
+  const targetBaseName = target.name.replace(/\.[^.]+$/, ''); // strip extension
+
+  // Find likely importers: files in same or parent directories, or files whose name suggests usage
+  const pathParts = target.path.split('/');
+  const likelyImporters = importers.filter(f => {
+    const ifParts = f.path.split('/');
+    // Same directory or subdirectory
+    const sharesDir = pathParts.some((p, i) => ifParts[i] === p && i < pathParts.length - 1);
+    // Imports file by name (e.g., utils.ts importing index.ts)
+    const nameMatches = f.path.includes(targetBaseName) && f.path !== target.path;
+    return sharesDir || nameMatches;
+  });
+
+  const correctImporters = likelyImporters.length > 0
+    ? [likelyImporters[Math.floor(rand() * likelyImporters.length)!]!.name]
+    : [];
+  const wrongOptions = getRandomItemsSeeded(
+    importers.filter(i => !correctImporters.includes(i.name)).map(f => f.name),
+    3,
+    rand
+  );
+
+  const answer = correctImporters[0] ?? wrongOptions[0];
 
   return {
     id,
     type: 'dependency-path',
-    question: `Which file imports "${targetFile}"?`,
-    options: shuffleArraySeeded([correctImporter, ...wrongFiles], rand),
-    answer: correctImporter,
-    explanation: `${correctImporter} imports ${targetFile}.`,
+    question: `Which file likely imports "${targetName}"?`,
+    options: shuffleArraySeeded([...(correctImporters.length > 0 ? correctImporters : []), ...wrongOptions].slice(0, 4), rand),
+    answer,
+    explanation: `"${targetName}" is likely a shared/utility module imported by other parts of the codebase.`,
     difficulty,
-    codeSnippet: files.find(f => f.name === correctImporter)?.content?.substring(0, 300),
   };
 }
 
