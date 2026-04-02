@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FileInfo, ComplexityMetrics, GameQuestion } from '@/lib/types';
 import type { GitHubRoundData } from '@/lib/parser';
 import { generateRoundQuestion } from '@/lib/parser';
@@ -197,10 +197,46 @@ export default function Games({ files, metrics, gitHubData, soloGame, setSoloGam
     setTimelineGuess(null);
   }, [gameType]);
 
-  // Generate question for current round — only when data is ready
-  const currentQ = useMemo<GameQuestion | null>(() => {
-    if (!hydrated || !files || files.length === 0) return null;
-    return generateRoundQuestion(roundKey, gameType as 'guess-file' | 'function-age' | 'dependency-path' | 'component-duel' | 'complexity-race' | 'commit-message' | 'code-author', files, metrics, gitHubData, 42, difficulty);
+  // Async question generation — runs AFTER render, so browser can always paint
+  const [currentQ, setCurrentQ] = useState<GameQuestion | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const genRef = useRef<{ roundKey: number; gameType: string } | null>(null);
+
+  useEffect(() => {
+    if (!hydrated || !files || files.length === 0) {
+      setCurrentQ(null);
+      return;
+    }
+
+    // Mark as generating immediately (will show skeleton)
+    setIsGenerating(true);
+
+    // Capture the generation params so we can compare after async work
+    const params = { roundKey, gameType };
+    genRef.current = params;
+
+    // Defer to end of event loop — lets browser paint the loading state first
+    Promise.resolve().then(() => {
+      // If a newer generation is already queued, skip this one
+      if (genRef.current !== params) return;
+
+      // Do the expensive work
+      const q = generateRoundQuestion(
+        roundKey,
+        gameType as 'guess-file' | 'function-age' | 'dependency-path' | 'component-duel' | 'complexity-race' | 'commit-message' | 'code-author',
+        files,
+        metrics,
+        gitHubData,
+        42,
+        difficulty
+      );
+
+      // Only apply if params are still current
+      if (genRef.current === params) {
+        setCurrentQ(q);
+        setIsGenerating(false);
+      }
+    });
   }, [roundKey, gameType, files, metrics, gitHubData, difficulty, hydrated]);
 
   const avgPts = score.roundsPlayed > 0 ? Math.round(score.totalPoints / score.roundsPlayed) : 0;
@@ -275,7 +311,7 @@ export default function Games({ files, metrics, gitHubData, soloGame, setSoloGam
     clearScore();
   }, []);
 
-  if (!hydrated) {
+  if (!hydrated || isGenerating || currentQ === null) {
     return (
       <div style={{
         textAlign: 'center',
