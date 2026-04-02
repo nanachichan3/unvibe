@@ -267,19 +267,19 @@ export function generateStaticQuestions(files: FileInfo[], metrics: ComplexityMe
   const questions: import('./types').GameQuestion[] = [];
   const topFiles = metrics.largestFiles.slice(0, 5);
 
-  // Guess the file by size
+  // ── GUESS FILE (existing) ──────────────────────────────────────────────
   for (const file of topFiles) {
     if (file.lines > 50) {
       questions.push({
         id: `guess-${file.path}`,
         type: 'guess-file',
-        question: `Which file has ${file.lines} lines?`,
+        question: `Which file has ${file.lines.toLocaleString()} lines?`,
         options: shuffleArray([
           file.name,
           ...getRandomItems(files.filter(f => f.path !== file.path).map(f => f.name), 3),
         ]),
         answer: file.name,
-        explanation: `${file.path} contains ${file.lines} lines of code`,
+        explanation: `${file.path} contains ${file.lines.toLocaleString()} lines of code`,
         difficulty: file.lines > 500 ? 'hard' : file.lines > 200 ? 'medium' : 'easy',
       });
     }
@@ -326,7 +326,197 @@ export function generateStaticQuestions(files: FileInfo[], metrics: ComplexityMe
     }
   }
 
-  return questions.slice(0, 20);
+  // ── COMPLEXITY RACE ────────────────────────────────────────────────────
+  // "Rank these files by size: smallest → largest"
+  if (topFiles.length >= 4) {
+    const raceFiles = shuffleArray(topFiles.slice(0, 5)).slice(0, 4);
+    const correct = raceFiles.map(f => f.name);
+    const question = {
+      id: 'race-complexity',
+      type: 'complexity-race' as const,
+      question: `Rank these files from SMALLEST to LARGEST (click in order):`,
+      options: raceFiles.map(f => `${f.name} (${f.lines} lines)`),
+      answer: correct.join('|'),
+      explanation: correct.map((f, i) => `${i + 1}. ${f}`).join(', '),
+      difficulty: 'medium' as const,
+    };
+    questions.push(question);
+  }
+
+  // ── COMPONENT DUEL ─────────────────────────────────────────────────────
+  // "Which file handles [functionality]?"
+  const fileFunctionalities = inferFilePurpose(files);
+  for (const [fileName, purpose] of fileFunctionalities.slice(0, 4)) {
+    const wrongFiles = getRandomItems(files.filter(f => f.name !== fileName).map(f => f.name), 3);
+    const allOpts = shuffleArray([purpose, ...wrongFiles]);
+    questions.push({
+      id: `duel-${fileName}`,
+      type: 'component-duel',
+      question: `Which file is most likely responsible for "${purpose}"?`,
+      options: allOpts,
+      answer: purpose,
+      explanation: `${fileName} is typically responsible for ${purpose}`,
+      difficulty: 'medium' as const,
+    });
+  }
+
+  // ── DEPENDENCY PATH ─────────────────────────────────────────────────────
+  // "What imports [file]?" — detect common import patterns
+  const importPairs = inferDependencyPairs(files);
+  for (const [targetFile, importers] of importPairs.slice(0, 3)) {
+    if (importers.length === 0) continue;
+    const correctImporter = importers[0];
+    const wrongFiles = getRandomItems(files.filter(f => f.name !== correctImporter && f.name !== targetFile).map(f => f.name), 3);
+    const allOpts = shuffleArray([correctImporter, ...wrongFiles]);
+    questions.push({
+      id: `dep-${targetFile}`,
+      type: 'dependency-path',
+      question: `Which file imports "${targetFile}"?`,
+      options: allOpts,
+      answer: correctImporter,
+      explanation: `${correctImporter} imports ${targetFile}`,
+      difficulty: 'hard' as const,
+    });
+  }
+
+  // ── COMMIT MESSAGE ──────────────────────────────────────────────────────
+  // "Given this file, pick the most likely commit message"
+  const commitPairs = inferCommitMessages(topFiles.slice(0, 5));
+  for (const [fileName, msgs] of commitPairs) {
+    if (msgs.length < 2) continue;
+    const correct = msgs[0];
+    const wrong = getRandomItems(msgs.slice(1).concat(getDefaultCommitMessages()), 3);
+    questions.push({
+      id: `commit-${fileName}`,
+      type: 'commit-message',
+      question: `A developer just edited \`${fileName}\`. What did they most likely do?`,
+      options: shuffleArray([correct, ...wrong]),
+      answer: correct,
+      explanation: `Most commits touching ${fileName} follow this pattern`,
+      difficulty: 'easy' as const,
+    });
+  }
+
+  return questions;
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Infer what a file likely does based on its name and path */
+function inferFilePurpose(files: FileInfo[]): Array<[string, string]> {
+  const pairs: Array<[string, string]> = [];
+  const PURPOSE_PATTERNS: Array<[RegExp[], string]> = [
+    [[/auth/i, /login/i, /signin/i], 'Authentication & login'],
+    [[/api/i, /route/i, /endpoint/i], 'API endpoints'],
+    [[/config/i, /settings/i, /env/i], 'Configuration'],
+    [[/db/i, /database/i, /model/i, /schema/i], 'Database operations'],
+    [[/util/i, /helper/i, /tool/i], 'Utility functions'],
+    [[/test/i, /spec/i, /__tests?__/i], 'Unit tests'],
+    [[/component/i, /ui/i, /widget/i], 'UI components'],
+    [[/service/i, /logic/i, /biz/i], 'Business logic'],
+    [[/middleware/i], 'Request middleware'],
+    [[/router/i, /route/i], 'Routing'],
+    [[/error/i, /exception/i], 'Error handling'],
+    [[/log/i, /logger/i, /audit/i], 'Logging'],
+    [[/cache/i, /redis/i], 'Caching'],
+    [[/email/i, /mail/i, /notification/i], 'Notifications'],
+    [[/upload/i, /file/i, /storage/i], 'File handling'],
+    [[/validator/i, /schema/i, /type/i], 'Validation'],
+    [[/session/i, /cookie/i, /token/i], 'Session management'],
+    [[/payment/i, /billing/i, /invoice/i], 'Payment processing'],
+    [[/analytics/i, /track/i, /metric/i], 'Analytics'],
+    [[/export/i, /import/i, /csv/i], 'Data import/export'],
+  ];
+
+  for (const file of files.slice(0, 30)) {
+    const name = file.name;
+    for (const [patterns, purpose] of PURPOSE_PATTERNS) {
+      if (patterns.some(p => p.test(name) || p.test(file.path))) {
+        if (!pairs.some(([, p]) => p === purpose)) {
+          pairs.push([name, purpose]);
+        }
+      }
+    }
+  }
+  return pairs;
+}
+
+/** Try to detect import relationships between files */
+function inferDependencyPairs(files: FileInfo[]): Array<[string, string[]]> {
+  const pairs: Array<[string, string[]]> = [];
+  const fileNameMap = new Map(files.map(f => [f.name.toLowerCase(), f.name]));
+
+  for (const file of files.slice(0, 50)) {
+    if (!file.content) continue;
+    // Look for CommonJS/ES6 import patterns
+    const importMatches = file.content.matchAll(/(?:import|require)\(['"]([^'"]+)['"]\)/g);
+    for (const match of importMatches) {
+      const imported = match[1];
+      // Try to resolve relative imports or module names
+      const lastSlash = file.path.lastIndexOf('/');
+      const fileDir = file.path.substring(0, lastSlash);
+      let resolved = imported;
+      if (imported.startsWith('.')) {
+        resolved = imported.replace(/\.[^.]+$/, '').split('/').pop() || imported;
+      }
+      const resolvedLower = resolved.toLowerCase();
+      const targetName = fileNameMap.get(resolvedLower) ||
+        files.find(f => f.name.toLowerCase().includes(resolvedLower))?.name;
+      if (targetName && targetName !== file.name) {
+        const existing = pairs.find(([t]) => t === targetName);
+        if (existing) {
+          if (!existing[1].includes(file.name)) existing[1].push(file.name);
+        } else {
+          pairs.push([targetName, [file.name]]);
+        }
+      }
+    }
+  }
+
+  return pairs;
+}
+
+/** Generate plausible commit message pairs from file names */
+function inferCommitMessages(topFiles: FileInfo[]): Array<[string, string[]]> {
+  return topFiles.map(f => {
+    const name = f.name.toLowerCase();
+    let msgs: string[];
+    if (/auth|login|signin/.test(name)) {
+      msgs = ['Add OAuth2 login flow', 'Fix session token expiry', 'Update password policy'];
+    } else if (/api|route|endpoint/.test(name)) {
+      msgs = ['Add new REST endpoint', 'Add pagination to GET /items', 'Rate limiting middleware'];
+    } else if (/test|spec/.test(name)) {
+      msgs = ['Add unit tests for auth', 'Increase test coverage', 'Mock external API calls'];
+    } else if (/config|env|settings/.test(name)) {
+      msgs = ['Add staging environment vars', 'Update API base URL', 'Enable debug mode'];
+    } else if (/component|ui|widget/.test(name)) {
+      msgs = ['Refactor button component styles', 'Add dark mode support', 'Fix accessibility issues'];
+    } else if (/db|database|model|schema/.test(name)) {
+      msgs = ['Add index on user_id column', 'Create migration for orders table', 'Optimize slow query'];
+    } else if (/util|helper/.test(name)) {
+      msgs = ['Extract date formatting helpers', 'Add input sanitization', 'Fix timezone bug'];
+    } else if (/middleware/.test(name)) {
+      msgs = ['Add CORS headers', 'Log request durations', 'Rate limit API calls'];
+    } else if (/error|exception/.test(name)) {
+      msgs = ['Add custom error class', 'Log stack traces to Sentry', 'Handle 404 gracefully'];
+    } else {
+      msgs = ['Refactor for readability', 'Add error handling', 'Performance optimization', 'Update dependencies'];
+    }
+    return [f.name, msgs] as [string, string[]];
+  });
+}
+
+function getDefaultCommitMessages(): string[] {
+  return [
+    'Fix typo in variable name',
+    'Update dependencies',
+    'Refactor for readability',
+    'Add comments',
+    'Fix CSS spacing',
+    'Remove unused imports',
+    'Minor cleanup',
+    'Fix edge case',
+  ];
 }
 
 function shuffleArray<T>(array: T[]): T[] {

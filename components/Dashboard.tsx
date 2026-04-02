@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Files, Code, Layers, AlertTriangle, TrendingUp, FolderTree, ChevronDown, ChevronRight, Bot, RefreshCw } from 'lucide-react';
+import { Files, Code, Layers, AlertTriangle, TrendingUp, FolderTree, ChevronDown, ChevronRight, Bot, RefreshCw, AlertCircle } from 'lucide-react';
 import type { FileInfo, ComplexityMetrics, GameQuestion } from '@/lib/types';
 import { buildDirectoryTree } from '@/lib/parser';
 import { escapeHtml } from '@/lib/sanitize';
@@ -30,6 +30,16 @@ const LOAD_COLORS = {
 
 const LANG_COLORS = ['#7B5CFF', '#5C8FFF', '#34D399', '#FBBF24', '#F97316', '#F87171', '#EC4899', '#8B5CF6'];
 
+// All available game types with labels
+export const GAME_TYPES = [
+  { id: 'guess-file', label: '🔍 Guess the File', desc: 'Identify files by description' },
+  { id: 'function-age', label: '📅 Function Age', desc: 'When was this code last modified?' },
+  { id: 'dependency-path', label: '🔗 Dependency Path', desc: 'Trace how files connect' },
+  { id: 'component-duel', label: '⚔️ Component Duel', desc: 'Match features to files' },
+  { id: 'complexity-race', label: '⚡ Complexity Race', desc: 'Rank files by size, fastest wins' },
+  { id: 'commit-message', label: '💬 Commit Message', desc: 'Guess the commit from a diff' },
+] as const;
+
 export default function Dashboard({ files, metrics, questions, gitHubData }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'files' | 'games'>('overview');
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set(['root']));
@@ -39,8 +49,37 @@ export default function Dashboard({ files, metrics, questions, gitHubData }: Das
     provider: 'gemini',
   });
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiSuccess, setAiSuccess] = useState(false);
   const [aiInsights, setAiInsights] = useState<{ insights: string[]; cognitiveDebtSignals: string[] } | null>(null);
   const [extraQuestions, setExtraQuestions] = useState<GameQuestion[]>([]);
+  const [selectedGameTypes, setSelectedGameTypes] = useState<Set<string>>(
+    new Set(GAME_TYPES.map(g => g.id))
+  );
+
+  // Load API key from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedKey = localStorage.getItem('unvibe_api_key');
+      const savedProvider = localStorage.getItem('unvibe_api_provider');
+      if (savedKey) {
+        setAiConfig({ apiKey: savedKey, provider: (savedProvider as 'gemini' | 'openai') || 'gemini' });
+      }
+    } catch {
+      // localStorage not available
+    }
+  }, []);
+
+  // Save API key to localStorage when it changes
+  const updateAiConfig = (config: typeof aiConfig) => {
+    setAiConfig(config);
+    try {
+      localStorage.setItem('unvibe_api_key', config.apiKey);
+      localStorage.setItem('unvibe_api_provider', config.provider);
+    } catch {
+      // localStorage not available
+    }
+  };
 
   const tree = buildDirectoryTree(files);
   const tabs = [
@@ -59,10 +98,11 @@ export default function Dashboard({ files, metrics, questions, gitHubData }: Das
   const runAIAnalysis = async () => {
     if (!aiConfig.apiKey) return;
     setAiLoading(true);
+    setAiError(null);
+    setAiSuccess(false);
     try {
       const { generateAIQuestions, analyzeWithAI, generateFunctionAgeQuestions } = await import('@/lib/ai');
 
-      // Run base analysis + question generation
       const [analysis, newQuestions] = await Promise.all([
         analyzeWithAI(files, metrics, { apiKey: aiConfig.apiKey, provider: aiConfig.provider }),
         generateAIQuestions(files, metrics, { apiKey: aiConfig.apiKey, provider: aiConfig.provider }, gitHubData),
@@ -70,7 +110,6 @@ export default function Dashboard({ files, metrics, questions, gitHubData }: Das
 
       setAiInsights(analysis);
 
-      // If GitHub source, also get function-age questions from real commit data
       if (gitHubData) {
         try {
           const fnAgeQuestions = await generateFunctionAgeQuestions(
@@ -87,13 +126,33 @@ export default function Dashboard({ files, metrics, questions, gitHubData }: Das
       } else {
         setExtraQuestions(newQuestions);
       }
+
+      setAiSuccess(true);
+      setTimeout(() => setAiSuccess(false), 3000);
     } catch (err) {
-      console.error('AI analysis failed:', err);
+      const msg = err instanceof Error ? err.message : 'AI analysis failed. Check your API key and try again.';
+      setAiError(msg);
     }
     setAiLoading(false);
   };
 
-  const allQuestions = [...questions, ...extraQuestions];
+  // Filter questions by selected game types
+  const allQuestions = [...questions, ...extraQuestions].filter(
+    q => selectedGameTypes.has(q.type)
+  );
+
+  const toggleGameType = (typeId: string) => {
+    setSelectedGameTypes(prev => {
+      const next = new Set(prev);
+      if (next.has(typeId)) {
+        if (next.size === 1) return prev; // keep at least one selected
+        next.delete(typeId);
+      } else {
+        next.add(typeId);
+      }
+      return next;
+    });
+  };
 
   return (
     <section style={{ padding: '80px 0 120px' }}>
@@ -108,13 +167,7 @@ export default function Dashboard({ files, metrics, questions, gitHubData }: Das
           gap: '16px',
         }}>
           <div>
-            <h2 style={{
-              fontFamily: 'Outfit',
-              fontSize: '32px',
-              fontWeight: 700,
-              letterSpacing: '-0.02em',
-              marginBottom: '8px',
-            }}>
+            <h2 style={{ fontFamily: 'Outfit', fontSize: '32px', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '8px' }}>
               Your Codebase
             </h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
@@ -271,7 +324,7 @@ export default function Dashboard({ files, metrics, questions, gitHubData }: Das
                 <h3 style={{ fontFamily: 'Outfit', fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Bot size={16} color="var(--accent)" />
                   AI Insights
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>(bring your own key)</span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>(BYOK)</span>
                 </h3>
                 <button
                   onClick={() => setShowAIConfig(!showAIConfig)}
@@ -301,11 +354,12 @@ export default function Dashboard({ files, metrics, questions, gitHubData }: Das
                 }}>
                   <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
                     Add your API key for cognitive debt analysis and unlimited game questions.
+                    Your key is stored locally and never sent to our servers.
                   </p>
                   <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
                     <select
                       value={aiConfig.provider}
-                      onChange={(e) => setAiConfig({ ...aiConfig, provider: e.target.value as 'openai' | 'gemini' })}
+                      onChange={(e) => updateAiConfig({ ...aiConfig, provider: e.target.value as 'gemini' | 'openai' })}
                       style={{
                         padding: '12px 16px',
                         background: 'var(--bg-primary)',
@@ -321,9 +375,9 @@ export default function Dashboard({ files, metrics, questions, gitHubData }: Das
                     </select>
                     <input
                       type="password"
-                      placeholder="API key..."
+                      placeholder="Paste your API key..."
                       value={aiConfig.apiKey}
-                      onChange={(e) => setAiConfig({ ...aiConfig, apiKey: e.target.value })}
+                      onChange={(e) => updateAiConfig({ ...aiConfig, apiKey: e.target.value })}
                       style={{
                         flex: 1,
                         padding: '12px 16px',
@@ -336,6 +390,42 @@ export default function Dashboard({ files, metrics, questions, gitHubData }: Das
                       }}
                     />
                   </div>
+
+                  {aiError && (
+                    <div style={{
+                      padding: '12px 16px',
+                      background: 'rgba(248,113,113,0.08)',
+                      border: '1px solid rgba(248,113,113,0.2)',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      color: '#F87171',
+                      marginBottom: '12px',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                    }}>
+                      <AlertCircle size={14} style={{ flexShrink: 0, marginTop: '2px' }} />
+                      {aiError}
+                    </div>
+                  )}
+
+                  {aiSuccess && (
+                    <div style={{
+                      padding: '12px 16px',
+                      background: 'rgba(52,211,153,0.08)',
+                      border: '1px solid rgba(52,211,153,0.2)',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      color: '#34D399',
+                      marginBottom: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}>
+                      ✓ AI analysis complete — new questions added to Games tab!
+                    </div>
+                  )}
+
                   <button
                     onClick={runAIAnalysis}
                     disabled={!aiConfig.apiKey || aiLoading}
@@ -343,7 +433,7 @@ export default function Dashboard({ files, metrics, questions, gitHubData }: Das
                     style={{ opacity: !aiConfig.apiKey || aiLoading ? 0.5 : 1, fontSize: '14px', padding: '12px 24px' }}
                   >
                     {aiLoading ? (
-                      <><RefreshCw size={14} className="animate-spin" /> Analyzing...</>
+                      <><RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> Analyzing codebase...</>
                     ) : (
                       <><Bot size={14} /> Run AI Analysis</>
                     )}
@@ -390,20 +480,62 @@ export default function Dashboard({ files, metrics, questions, gitHubData }: Das
 
         {/* Games Tab */}
         {activeTab === 'games' && (
-          <Games questions={allQuestions} />
+          <>
+            {/* Game type selector */}
+            <div className="card animate-fade-up" style={{ padding: '20px 24px', marginBottom: '24px' }}>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px', fontFamily: 'Outfit', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Choose Game Types
+              </p>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                {GAME_TYPES.map(game => {
+                  const isSelected = selectedGameTypes.has(game.id);
+                  const hasQuestions = allQuestions.some(q => q.type === game.id);
+                  return (
+                    <button
+                      key={game.id}
+                      onClick={() => toggleGameType(game.id)}
+                      style={{
+                        padding: '10px 16px',
+                        background: isSelected ? 'var(--accent-subtle)' : 'var(--bg-elevated)',
+                        border: `1px solid ${isSelected ? 'rgba(123,92,255,0.4)' : 'var(--border)'}`,
+                        borderRadius: 'var(--radius-md)',
+                        color: isSelected ? 'var(--accent)' : 'var(--text-muted)',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontFamily: 'Outfit',
+                        fontWeight: 600,
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      <span style={{ opacity: isSelected ? 1 : 0.5 }}>{game.label}</span>
+                      {hasQuestions && (
+                        <span style={{
+                          fontSize: '10px',
+                          padding: '2px 6px',
+                          background: isSelected ? 'var(--accent)' : 'var(--border)',
+                          color: isSelected ? '#fff' : 'var(--text-muted)',
+                          borderRadius: '10px',
+                          fontFamily: 'JetBrains Mono',
+                        }}>
+                          {allQuestions.filter(q => q.type === game.id).length}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <Games questions={allQuestions} />
+          </>
         )}
       </div>
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        .animate-spin { animation: spin 1s linear infinite; }
-        @media (max-width: 1024px) {
-          .grid-4-view { grid-template-columns: repeat(2, 1fr) !important; }
-        }
-        @media (max-width: 640px) {
-          .grid-4-view { grid-template-columns: 1fr !important; }
-          .grid-charts { grid-template-columns: 1fr !important; }
-        }
       `}</style>
     </section>
   );

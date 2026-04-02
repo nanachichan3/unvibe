@@ -15,8 +15,8 @@ export async function generateAIQuestions(
   };
 
   const questionTypes = gitHubData
-    ? 'guess-file, component-duel, dependency-path, function-age, code-author'
-    : 'guess-file, component-duel, dependency-path';
+    ? 'guess-file, component-duel, dependency-path, function-age, code-author, complexity-race, commit-message'
+    : 'guess-file, component-duel, dependency-path, complexity-race, commit-message';
 
   const prompt = `You are designing quiz questions for a game called "Unvibe" that helps software teams understand their codebase.
 

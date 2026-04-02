@@ -38,7 +38,7 @@ export interface ComplexityMetrics {
 
 export interface GameQuestion {
   id: string;
-  type: 'guess-file' | 'component-duel' | 'dependency-path' | 'memory-match' | 'function-age' | 'code-author';
+  type: 'guess-file' | 'component-duel' | 'dependency-path' | 'memory-match' | 'function-age' | 'code-author' | 'complexity-race' | 'commit-message';
   question: string;
   options: string[];
   answer: string;
