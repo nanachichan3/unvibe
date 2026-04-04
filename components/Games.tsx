@@ -8,6 +8,14 @@ import { FunctionAgeTimeline } from './FunctionAgeTimeline';
 import WhatDoesThisDo from './games/WhatDoesThisDo';
 import FindTheBug from './games/FindTheBug';
 import SpotTheVuln from './games/SpotTheVuln';
+import TraceTheCall from './games/TraceTheCall';
+import TypeInference from './games/TypeInference';
+import RefactorThis from './games/RefactorThis';
+import ReadTheArchitecture from './games/ReadTheArchitecture';
+import CommitTimeline from './games/CommitTimeline';
+import CodeTimeline from './games/CodeTimeline';
+import CommitAuthor from './games/CommitAuthor';
+import LineAuthor from './games/LineAuthor';
 import { getSessionTokens, resetSessionTokens } from '@/lib/ai/client';
 import type { AIGameConfig } from '@/lib/types';
 
@@ -444,8 +452,84 @@ export default function Games({ files, metrics, gitHubData, soloGame, setSoloGam
             />
           )}
 
+          {/* G8: Commit Timeline — GitHub required */}
+          {gameType === 'function-age' && gitHubData && (
+            <CommitTimeline
+              gitHubData={gitHubData}
+              apiKey={aiConfig?.apiKey}
+              sessionTokens={sessionTokens}
+              onSessionTokensChange={setSessionTokens}
+            />
+          )}
+
+          {/* G10: Commit Author — GitHub required */}
+          {gameType === 'commit-message' && gitHubData && (
+            <CommitAuthor
+              gitHubData={gitHubData}
+              apiKey={aiConfig?.apiKey}
+              sessionTokens={sessionTokens}
+              onSessionTokensChange={setSessionTokens}
+            />
+          )}
+
+          {/* G9: Code Timeline — no GitHub needed */}
+          {gameType === 'code-author' && (
+            <CodeTimeline
+              files={files}
+              apiKey={aiConfig?.apiKey}
+              sessionTokens={sessionTokens}
+              onSessionTokensChange={setSessionTokens}
+            />
+          )}
+
+          {/* G11: Line Author — GitHub preferred, fallback without it */}
+          {gameType === 'line-author' && (
+            <LineAuthor
+              files={files}
+              gitHubData={gitHubData}
+              apiKey={aiConfig?.apiKey}
+              sessionTokens={sessionTokens}
+              onSessionTokensChange={setSessionTokens}
+            />
+          )}
+
+          {/* New AI Solo Games (G3, G5, G6, G7) — rendered independently */}
+          {gameType === 'dependency-path' && (
+            <TraceTheCall
+              files={files}
+              apiKey={aiConfig?.apiKey}
+              sessionTokens={sessionTokens}
+              onSessionTokensChange={setSessionTokens}
+            />
+          )}
+          {gameType === 'type-inference' && (
+            <TypeInference
+              files={files}
+              apiKey={aiConfig?.apiKey}
+              sessionTokens={sessionTokens}
+              onSessionTokensChange={setSessionTokens}
+            />
+          )}
+          {gameType === 'refactor-this' && (
+            <RefactorThis
+              files={files}
+              apiKey={aiConfig?.apiKey}
+              sessionTokens={sessionTokens}
+              onSessionTokensChange={setSessionTokens}
+            />
+          )}
+          {gameType === 'read-the-arch' && (
+            <ReadTheArchitecture
+              files={files}
+              metrics={metrics}
+              apiKey={aiConfig?.apiKey}
+              sessionTokens={sessionTokens}
+              onSessionTokensChange={setSessionTokens}
+            />
+          )}
+
           {/* GitHub games show "GitHub data required" when no gitHubData */}
-          {(gameType === 'function-age' || gameType === 'commit-message' || gameType === 'code-author' || gameType === 'line-author') && !gitHubData && (
+          {(gameType === 'function-age' || gameType === 'commit-message' || gameType === 'line-author') && !gitHubData && (
             <div className="vim-card">
               <div className="vim-card-header">
                 <span>GitHub Data Required</span>
@@ -469,7 +553,7 @@ export default function Games({ files, metrics, gitHubData, soloGame, setSoloGam
           )}
 
           {/* Legacy games (rendered with the existing parser-based question system) */}
-          {!['what-does-this-do', 'find-the-bug', 'spot-the-vuln'].includes(gameType) && gitHubData !== undefined && !currentQ ? (
+          {!['what-does-this-do', 'find-the-bug', 'spot-the-vuln', 'dependency-path', 'type-inference', 'refactor-this', 'read-the-arch', 'function-age', 'code-author', 'commit-message', 'line-author'].includes(gameType) && gitHubData !== undefined && !currentQ ? (
             <div className="vim-empty">
               <div className="vim-empty-title">No question available</div>
               <p>Not enough data in this codebase for the selected game type.</p>

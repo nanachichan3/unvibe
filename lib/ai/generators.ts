@@ -1,3 +1,109 @@
+// ── Code Era Detection (G9: Code Timeline) ───────────────────────────────────
+
+export interface EraResult {
+  era: string;         // "pre-2015", "2015+", "2017+", "2020+", "2023+"
+  confidence: number;   // 0-1
+  markers: string[];    // descriptions of matched markers
+}
+
+export const ERA_RANGES: Array<{ era: string; label: string; weight: number }> = [
+  { era: 'pre-2015', label: 'Before 2015 (ES5 era)', weight: 1 },
+  { era: '2015+', label: '2015-2016 (ES6/ES2015)', weight: 2 },
+  { era: '2017+', label: '2017-2019 (async/await, React hooks)', weight: 2 },
+  { era: '2020+', label: '2020-2022 (optional chaining, ??)', weight: 2 },
+  { era: '2023+', label: '2023+ (React Server Components)', weight: 1 },
+];
+
+const ERA_MARKERS: Array<{ pattern: RegExp; era: string; description: string; weight: number }> = [
+  // Pre-2015 patterns
+  { pattern: /\bvar\s+\w+\s*=/, era: 'pre-2015', description: 'var keyword (ES5)', weight: 1 },
+  { pattern: /\$\.\w+\(/, era: 'pre-2015', description: 'jQuery pattern ($())', weight: 2 },
+  { pattern: /document\.getElementById/, era: 'pre-2015', description: 'Vanilla DOM manipulation', weight: 1 },
+  { pattern: /\.ajax\s*\(/, era: 'pre-2015', description: 'jQuery AJAX', weight: 2 },
+  { pattern: /require\s*\(/, era: 'pre-2015', description: 'CommonJS require()', weight: 1 },
+  { pattern: /module\.exports/, era: 'pre-2015', description: 'CommonJS exports', weight: 1 },
+  { pattern: /callback\s*\)\s*\);/, era: 'pre-2015', description: 'Callback pyramid', weight: 1 },
+
+  // 2015+ patterns (ES6)
+  { pattern: /\bconst\s+\w+\s*=/, era: '2015+', description: 'const keyword (ES6)', weight: 1 },
+  { pattern: /\blet\s+\w+\s*=/, era: '2015+', description: 'let keyword (ES6)', weight: 1 },
+  { pattern: /=>\s*[{(]/, era: '2015+', description: 'Arrow functions', weight: 1 },
+  { pattern: /`[^`]*\$\{[^}]+\}[^`]*`/, era: '2015+', description: 'Template literals', weight: 1 },
+  { pattern: /\bimport\s+.*\s+from\s+['"]/, era: '2015+', description: 'ES6 import', weight: 1 },
+  { pattern: /import\s+\{[^}]+\}\s+from/, era: '2015+', description: 'ES6 named imports', weight: 1 },
+  { pattern: /\bclass\s+\w+\s+extends\b/, era: '2015+', description: 'ES6 class inheritance', weight: 1 },
+  { pattern: /\bSet\s*<|, Map\s*</, era: '2015+', description: 'ES6 generic collections', weight: 1 },
+  { pattern: /\bPromise\s*</, era: '2015+', description: 'ES6 Promises', weight: 1 },
+  { pattern: /: string\s*\|/, era: '2015+', description: 'TypeScript union types', weight: 1 },
+  { pattern: /interface\s+\w+\s*\{/, era: '2015+', description: 'TypeScript interfaces', weight: 1 },
+
+  // 2017+ patterns
+  { pattern: /\basync\s+/, era: '2017+', description: 'async function', weight: 2 },
+  { pattern: /\bawait\s+/, era: '2017+', description: 'await keyword', weight: 2 },
+  { pattern: /useState\s*</, era: '2017+', description: 'React useState hook', weight: 2 },
+  { pattern: /useEffect\s*\(/, era: '2017+', description: 'React useEffect hook', weight: 2 },
+  { pattern: /useMemo\s*\(/, era: '2017+', description: 'React useMemo hook', weight: 2 },
+  { pattern: /useCallback\s*\(/, era: '2017+', description: 'React useCallback hook', weight: 2 },
+  { pattern: /React\.useState/, era: '2017+', description: 'React hooks (class-to-hooks era)', weight: 2 },
+
+  // 2020+ patterns
+  { pattern: /\?\?\s*[=]/, era: '2020+', description: 'Nullish coalescing operator (??)', weight: 2 },
+  { pattern: /\?.\s*\w/, era: '2020+', description: 'Optional chaining (?.)', weight: 2 },
+  { pattern: /\.replaceAll\s*\(/, era: '2020+', description: 'String replaceAll (ES2021)', weight: 2 },
+  { pattern: /\bPromise\.allSettled/, era: '2020+', description: 'Promise.allSettled (ES2020)', weight: 1 },
+  { pattern: /\bglobalThis\./, era: '2020+', description: 'globalThis (ES2020)', weight: 1 },
+  { pattern: /BigInt\s*\(/, era: '2020+', description: 'BigInt type', weight: 1 },
+  { pattern: /\bimport\s*\(/, era: '2020+', description: 'Dynamic import()', weight: 1 },
+
+  // 2023+ patterns
+  { pattern: /\buse\s*\(\s*\w+/, era: '2023+', description: 'React Server Components / use()', weight: 3 },
+  { pattern: /'use client'/, era: '2023+', description: 'React Server Components directive', weight: 3 },
+  { pattern: /'use server'/, era: '2023+', description: 'React Server Components directive', weight: 3 },
+  { pattern: /React\.startTransition/, era: '2023+', description: 'React 18 startTransition', weight: 2 },
+  { pattern: /\bSuspense\s*/, era: '2023+', description: 'React Suspense (RSC era)', weight: 2 },
+  { pattern: /Server\s*\.\s*Component/, era: '2023+', description: 'Server Component pattern', weight: 3 },
+  { pattern: /\btop-level\s+await\b/, era: '2023+', description: 'Top-level await (ES2022)', weight: 2 },
+];
+
+export function detectCodeEra(content: string): EraResult {
+  const matchedMarkers: Array<{ era: string; description: string; weight: number }> = [];
+
+  for (const marker of ERA_MARKERS) {
+    if (marker.pattern.test(content)) {
+      matchedMarkers.push({
+        era: marker.era,
+        description: marker.description,
+        weight: marker.weight,
+      });
+    }
+  }
+
+  // Score each era
+  const eraScores: Record<string, number> = {};
+  for (const match of matchedMarkers) {
+    eraScores[match.era] = (eraScores[match.era] || 0) + match.weight;
+  }
+
+  // Find the era with the highest score
+  let topEra = ERA_RANGES[0]!.era;
+  let topScore = 0;
+  for (const [era, score] of Object.entries(eraScores)) {
+    if (score > topScore) {
+      topScore = score;
+      topEra = era;
+    }
+  }
+
+  // Calculate confidence (0-1) based on marker matches
+  const confidence = Math.min(1, matchedMarkers.length / 3);
+
+  return {
+    era: topEra,
+    confidence,
+    markers: matchedMarkers.map(m => m.description),
+  };
+}
+
 // AI-powered question generators for games
 
 import { createAIGenerator, parseJSON, type AIResponse } from './client';
