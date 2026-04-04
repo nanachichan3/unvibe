@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import ModeToggle from '../ModeToggle';
-import AIKeySetup from '../AIKeySetup';
+import AIKeySetup, { getStoredApiKey } from '../AIKeySetup';
 import TokenMeter from '../TokenMeter';
 import { generateRefactorOptions } from '@/lib/ai/generators';
 import type { FileInfo } from '@/lib/types';
@@ -352,7 +352,7 @@ export default function RefactorThis({
       setIsGenerating(false);
     } else {
       // AI mode
-      if (!apiKey) {
+      if (!apiKey && !getStoredApiKey()) {
         setQuestion({
           snippet: '// API key required for AI mode',
           smell: 'N/A',
@@ -383,7 +383,7 @@ export default function RefactorThis({
       const snippet = (file.content || '').substring(0, 1500);
 
       try {
-        const result = await generateRefactorOptions(snippet, apiKey);
+        const result = await generateRefactorOptions(snippet, apiKey || getStoredApiKey() || '');
         setRoundTokens(result.tokenCost);
         onSessionTokensChange(sessionTokens + result.tokenCost);
 

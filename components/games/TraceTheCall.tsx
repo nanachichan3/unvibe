@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import ModeToggle from '../ModeToggle';
-import AIKeySetup from '../AIKeySetup';
+import AIKeySetup, { getStoredApiKey } from '../AIKeySetup';
 import TokenMeter from '../TokenMeter';
 import type { FileInfo } from '@/lib/types';
 

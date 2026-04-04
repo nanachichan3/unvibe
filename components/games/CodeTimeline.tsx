@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import ModeToggle from '../ModeToggle';
-import AIKeySetup from '../AIKeySetup';
+import AIKeySetup, { getStoredApiKey } from '../AIKeySetup';
 import TokenMeter from '../TokenMeter';
 import { generateCodeTimeline, detectCodeEra, ERA_RANGES } from '@/lib/ai/generators';
 import type { FileInfo } from '@/lib/types';
@@ -128,7 +128,7 @@ export default function CodeTimeline({
       setIsGenerating(false);
     } else {
       // AI mode
-      if (!apiKey) {
+      if (!apiKey && !getStoredApiKey()) {
         setQuestion({
           options: ['Before 2015', '2015-2016', '2017-2019', '2020+'],
           answer: '2015-2016',
@@ -142,7 +142,7 @@ export default function CodeTimeline({
       }
 
       try {
-        const result = await generateCodeTimeline(snippet, apiKey);
+        const result = await generateCodeTimeline(snippet, apiKey || getStoredApiKey() || '');
         setRoundTokens(result.tokenCost);
         onSessionTokensChange(sessionTokens + result.tokenCost);
 

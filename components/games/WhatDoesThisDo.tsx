@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import ModeToggle from '../ModeToggle';
 import TokenMeter from '../TokenMeter';
-import AIKeySetup from '../AIKeySetup';
+import AIKeySetup, { getStoredApiKey } from '../AIKeySetup';
 import { generateWhatDoesThisDo } from '@/lib/ai/generators';
 import { generateHeuristicDescription, generateDistractors } from '@/lib/patterns/bugs';
 import type { FileInfo } from '@/lib/types';
@@ -157,7 +157,7 @@ export default function WhatDoesThisDo({
       setIsGenerating(false);
     } else {
       // AI mode
-      if (!apiKey) {
+      if (!apiKey && !getStoredApiKey()) {
         setQuestion({
           options: ['Processes data', 'Filters items', 'Creates records', 'Deletes data'],
           answer: 'Processes data',
@@ -186,7 +186,7 @@ export default function WhatDoesThisDo({
       const snippet = extractFunctionFromFile(file, 5, 50) || file.content?.substring(0, 800) || '';
 
       try {
-        const result = await generateWhatDoesThisDo(snippet, apiKey);
+        const result = await generateWhatDoesThisDo(snippet, apiKey || getStoredApiKey() || '');
         setRoundTokens(result.tokenCost);
         onSessionTokensChange(sessionTokens + result.tokenCost);
 

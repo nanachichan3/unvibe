@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import ModeToggle from '../ModeToggle';
-import AIKeySetup from '../AIKeySetup';
+import AIKeySetup, { getStoredApiKey } from '../AIKeySetup';
 import TokenMeter from '../TokenMeter';
 import { buildDirectoryTree } from '@/lib/parser';
 import type { DirectoryNode, FileInfo, ComplexityMetrics } from '@/lib/types';

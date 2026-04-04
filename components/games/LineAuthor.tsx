@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import ModeToggle from '../ModeToggle';
-import AIKeySetup from '../AIKeySetup';
+import AIKeySetup, { getStoredApiKey } from '../AIKeySetup';
 import TokenMeter from '../TokenMeter';
 import { generateLineAuthor } from '@/lib/ai/generators';
 import type { FileInfo } from '@/lib/types';
@@ -210,7 +210,7 @@ export default function LineAuthor({
       setIsGenerating(false);
     } else {
       // AI mode
-      if (!apiKey) {
+      if (!apiKey && !getStoredApiKey()) {
         setQuestion({
           options: FALLBACK_AUTHORS.slice(0, 4),
           answer: FALLBACK_AUTHORS[0],
@@ -256,7 +256,7 @@ export default function LineAuthor({
       const { lines, startLine, endLine } = extractLines(file.content!, 3);
 
       try {
-        const result = await generateLineAuthor(lines, contributors, apiKey);
+        const result = await generateLineAuthor(lines, contributors, apiKey || getStoredApiKey() || '');
         setRoundTokens(result.tokenCost);
         onSessionTokensChange(sessionTokens + result.tokenCost);
 

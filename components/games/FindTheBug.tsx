@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import ModeToggle from '../ModeToggle';
-import AIKeySetup from '../AIKeySetup';
+import AIKeySetup, { getStoredApiKey } from '../AIKeySetup';
 import TokenMeter from '../TokenMeter';
 import { generateFindTheBug } from '@/lib/ai/generators';
 import { detectBugs, type BugMatch } from '@/lib/patterns/bugs';
@@ -192,7 +192,7 @@ export default function FindTheBug({
       setIsGenerating(false);
     } else {
       // AI mode
-      if (!apiKey) {
+      if (!apiKey && !getStoredApiKey()) {
         setQuestion({
           options: ['Loose equality', 'Missing return', 'Wrong method', 'Unused var'],
           answer: 'Loose equality',
@@ -225,7 +225,7 @@ export default function FindTheBug({
       const snippet = (file.content || '').substring(0, 1500);
 
       try {
-        const result = await generateFindTheBug(snippet, apiKey);
+        const result = await generateFindTheBug(snippet, apiKey || getStoredApiKey() || '');
         setRoundTokens(result.tokenCost);
         onSessionTokensChange(sessionTokens + result.tokenCost);
 

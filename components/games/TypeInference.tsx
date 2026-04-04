@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import ModeToggle from '../ModeToggle';
-import AIKeySetup from '../AIKeySetup';
+import AIKeySetup, { getStoredApiKey } from '../AIKeySetup';
 import TokenMeter from '../TokenMeter';
 import { generateTypeInference } from '@/lib/ai/generators';
 import type { FileInfo } from '@/lib/types';
@@ -552,7 +552,7 @@ export default function TypeInference({
       setIsGenerating(false);
     } else {
       // AI mode
-      if (!apiKey) {
+      if (!apiKey && !getStoredApiKey()) {
         setQuestion({
           options: ['string', 'number', 'boolean', 'object'],
           answer: 'string',
@@ -583,7 +583,7 @@ export default function TypeInference({
       const snippet = extractFunctionFromFile(file, 3, 30) || file.content?.substring(0, 800) || '';
 
       try {
-        const result = await generateTypeInference(snippet, apiKey);
+        const result = await generateTypeInference(snippet, apiKey || getStoredApiKey() || '');
         setRoundTokens(result.tokenCost);
         onSessionTokensChange(sessionTokens + result.tokenCost);
 
