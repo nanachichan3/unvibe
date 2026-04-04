@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import ModeToggle from '../ModeToggle';
+import AIKeySetup from '../AIKeySetup';
 import TokenMeter from '../TokenMeter';
 import { generateFindTheBug } from '@/lib/ai/generators';
 import { detectBugs, type BugMatch } from '@/lib/patterns/bugs';
@@ -299,6 +300,8 @@ export default function FindTheBug({
           onSimpleChange={(v) => setMode(v ? 'simple' : 'ai')}
           roundTokens={roundTokens}
         />
+
+        {mode === 'ai' && <AIKeySetup compact />}
 
         {mode === 'ai' && <TokenMeter sessionTokens={sessionTokens} roundTokens={roundTokens} />}
 

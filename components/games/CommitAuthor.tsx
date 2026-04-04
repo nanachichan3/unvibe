@@ -1,8 +1,6 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import ModeToggle from '../ModeToggle';
-import TokenMeter from '../TokenMeter';
 import type { GitHubRoundData } from '@/lib/parser';
 
 interface CommitAuthorProps {

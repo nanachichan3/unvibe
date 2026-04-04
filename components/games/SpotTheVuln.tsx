@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import ModeToggle from '../ModeToggle';
+import AIKeySetup from '../AIKeySetup';
 import TokenMeter from '../TokenMeter';
 import { generateSpotVuln } from '@/lib/ai/generators';
 import { detectVulnerabilities, type VulnerabilityMatch } from '@/lib/patterns/vulnerabilities';
@@ -237,6 +238,8 @@ export default function SpotTheVuln({
           onSimpleChange={(v) => setMode(v ? 'simple' : 'ai')}
           roundTokens={roundTokens}
         />
+
+        {mode === 'ai' && <AIKeySetup compact />}
 
         {mode === 'ai' && <TokenMeter sessionTokens={sessionTokens} roundTokens={roundTokens} />}
 

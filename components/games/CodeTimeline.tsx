@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import ModeToggle from '../ModeToggle';
+import AIKeySetup from '../AIKeySetup';
 import TokenMeter from '../TokenMeter';
 import { generateCodeTimeline, detectCodeEra, ERA_RANGES } from '@/lib/ai/generators';
 import type { FileInfo } from '@/lib/types';
@@ -211,6 +212,8 @@ export default function CodeTimeline({
           onSimpleChange={(v) => setMode(v ? 'simple' : 'ai')}
           roundTokens={roundTokens}
         />
+
+        {mode === 'ai' && <AIKeySetup compact />}
 
         {/* Token meter for AI mode */}
         {mode === 'ai' && <TokenMeter sessionTokens={sessionTokens} roundTokens={roundTokens} />}

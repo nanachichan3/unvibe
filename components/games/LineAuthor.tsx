@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import ModeToggle from '../ModeToggle';
+import AIKeySetup from '../AIKeySetup';
 import TokenMeter from '../TokenMeter';
 import { generateLineAuthor } from '@/lib/ai/generators';
 import type { FileInfo } from '@/lib/types';
@@ -331,6 +332,8 @@ export default function LineAuthor({
           onSimpleChange={(v) => setMode(v ? 'simple' : 'ai')}
           roundTokens={roundTokens}
         />
+
+        {mode === 'ai' && <AIKeySetup compact />}
 
         {/* Token meter for AI mode */}
         {mode === 'ai' && <TokenMeter sessionTokens={sessionTokens} roundTokens={roundTokens} />}

@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import ModeToggle from '../ModeToggle';
 import TokenMeter from '../TokenMeter';
+import AIKeySetup from '../AIKeySetup';
 import { generateWhatDoesThisDo } from '@/lib/ai/generators';
 import { generateHeuristicDescription, generateDistractors } from '@/lib/patterns/bugs';
 import type { FileInfo } from '@/lib/types';
@@ -253,6 +254,9 @@ export default function WhatDoesThisDo({
           onSimpleChange={(v) => setMode(v ? 'simple' : 'ai')}
           roundTokens={roundTokens}
         />
+
+        {/* AI key setup — shows inline form in AI mode when no key, or compact indicator when key exists */}
+        {mode === 'ai' && <AIKeySetup compact />}
 
         {/* Token meter for AI mode */}
         {mode === 'ai' && <TokenMeter sessionTokens={sessionTokens} roundTokens={roundTokens} />}
