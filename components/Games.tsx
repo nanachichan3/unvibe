@@ -5,15 +5,28 @@ import type { FileInfo, ComplexityMetrics, GameQuestion } from '@/lib/types';
 import type { GitHubRoundData } from '@/lib/parser';
 import { generateRoundQuestion } from '@/lib/parser';
 import { FunctionAgeTimeline } from './FunctionAgeTimeline';
+import WhatDoesThisDo from './games/WhatDoesThisDo';
+import FindTheBug from './games/FindTheBug';
+import SpotTheVuln from './games/SpotTheVuln';
+import { getSessionTokens, resetSessionTokens } from '@/lib/ai/client';
+import type { AIGameConfig } from '@/lib/types';
 
 // Shared game type definitions — imported by Dashboard for the selector
 export const GAME_TYPES = [
-  { id: 'guess-file', label: '🔍 Guess the File', desc: 'Identify files by description' },
-  { id: 'function-age', label: '📅 Function Age', desc: 'When was this code last modified?' },
-  { id: 'dependency-path', label: '🔗 Dependency Path', desc: 'Trace how files connect' },
-  { id: 'component-duel', label: '⚔️ Component Duel', desc: 'Match features to files' },
-  { id: 'complexity-race', label: '⚡ Complexity Race', desc: 'Rank files by size, fastest wins' },
-  { id: 'commit-message', label: '💬 Commit Message', desc: 'Guess the commit from a diff' },
+  { id: 'guess-file', label: '🔍 Guess the File', desc: 'Identify files by description', github: false },
+  { id: 'what-does-this-do', label: '📖 What Does This Do', desc: 'Understand code from its snippet', github: false },
+  { id: 'find-the-bug', label: '🔎 Find the Bug', desc: 'Spot the bug in real code', github: false },
+  { id: 'spot-the-vuln', label: '🛡️ Spot the Vulnerability', desc: 'Find the security flaw', github: false },
+  { id: 'dependency-path', label: '🔗 Trace the Call', desc: 'Follow the call chain', github: false },
+  { id: 'type-inference', label: '💎 Type Inference', desc: 'Infer types from code', github: false },
+  { id: 'refactor-this', label: '♻️ Refactor This', desc: 'Find the best refactor', github: false },
+  { id: 'read-the-arch', label: '🏗️ Read the Architecture', desc: 'Understand project structure', github: false },
+  { id: 'function-age', label: '📅 Commit Timeline', desc: 'When was this commit?', github: true },
+  { id: 'code-author', label: '⏳ Code Timeline', desc: 'When was this code written?', github: false },
+  { id: 'commit-message', label: '👤 Commit Author', desc: 'Who made this commit?', github: true },
+  { id: 'line-author', label: '✍️ Line Author', desc: 'Who wrote this line?', github: true },
+  { id: 'component-duel', label: '⚔️ Component Duel', desc: 'Match features to files', github: false },
+  { id: 'complexity-race', label: '⚡ Complexity Race', desc: 'Rank files by size, fastest wins', github: false },
 ] as const;
 
 export type GameTypeId = typeof GAME_TYPES[number]['id'];
@@ -24,6 +37,7 @@ interface GamesProps {
   gitHubData?: GitHubRoundData;
   soloGame: string | null;
   setSoloGame: (id: string | null) => void;
+  aiConfig?: { apiKey: string };
 }
 
 // ── Score persistence ───────────────────────────────────────────
@@ -142,7 +156,7 @@ function weightedPick<T extends { id: string }>(
 const DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
 type Difficulty = typeof DIFFICULTIES[number];
 
-export default function Games({ files, metrics, gitHubData, soloGame, setSoloGame }: GamesProps) {
+export default function Games({ files, metrics, gitHubData, soloGame, setSoloGame, aiConfig }: GamesProps) {
   const [gameType, setGameType] = useState<string>(soloGame ?? 'guess-file');
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const [roundKey, setRoundKey] = useState(0);
@@ -156,6 +170,7 @@ export default function Games({ files, metrics, gitHubData, soloGame, setSoloGam
   const [complexityOrder, setComplexityOrder] = useState<string[]>([]);
   const [complexityStep, setComplexityStep] = useState(0);
   const [timelineGuess, setTimelineGuess] = useState<{ ms: number; pts: number } | null>(null);
+  const [sessionTokens, setSessionTokens] = useState(0);
 
   const exposureRef = useRef<Record<string, number>>({});
   const exposureRefInitialized = useRef(false);
@@ -403,8 +418,58 @@ export default function Games({ files, metrics, gitHubData, soloGame, setSoloGam
             Round {roundKey + 1} · seed:{roundKey * 31_127 + gameType.length * 7_193}
           </div>
 
-          {/* Question card */}
-          {!currentQ ? (
+          {/* New AI Solo Games (G1, G2, G4) — rendered independently */}
+          {gameType === 'what-does-this-do' && (
+            <WhatDoesThisDo
+              files={files}
+              apiKey={aiConfig?.apiKey}
+              sessionTokens={sessionTokens}
+              onSessionTokensChange={setSessionTokens}
+            />
+          )}
+          {gameType === 'find-the-bug' && (
+            <FindTheBug
+              files={files}
+              apiKey={aiConfig?.apiKey}
+              sessionTokens={sessionTokens}
+              onSessionTokensChange={setSessionTokens}
+            />
+          )}
+          {gameType === 'spot-the-vuln' && (
+            <SpotTheVuln
+              files={files}
+              apiKey={aiConfig?.apiKey}
+              sessionTokens={sessionTokens}
+              onSessionTokensChange={setSessionTokens}
+            />
+          )}
+
+          {/* GitHub games show "GitHub data required" when no gitHubData */}
+          {(gameType === 'function-age' || gameType === 'commit-message' || gameType === 'code-author' || gameType === 'line-author') && !gitHubData && (
+            <div className="vim-card">
+              <div className="vim-card-header">
+                <span>GitHub Data Required</span>
+              </div>
+              <div style={{ padding: '40px', textAlign: 'center' }}>
+                <div className="vim-code" style={{ maxWidth: '500px', margin: '0 auto', textAlign: 'left' }}>
+                  <div className="vim-code-header">
+                    <span>// error</span>
+                    <span style={{ color: '#f85149' }}>E169: GitHub data not available</span>
+                  </div>
+                  <div className="vim-code-content" style={{ padding: '16px', fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: '#6a9955' }}>
+                    <p>:GitHub authentication required for this game.</p>
+                    <p>Connect a GitHub repository to enable:</p>
+                    <p style={{ marginTop: '8px', color: '#569cd6' }}>  • Commit Timeline</p>
+                    <p style={{ color: '#569cd6' }}>  • Commit Author</p>
+                    <p style={{ color: '#569cd6' }}>  • Line Author</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Legacy games (rendered with the existing parser-based question system) */}
+          {!['what-does-this-do', 'find-the-bug', 'spot-the-vuln'].includes(gameType) && gitHubData !== undefined && !currentQ ? (
             <div className="vim-empty">
               <div className="vim-empty-title">No question available</div>
               <p>Not enough data in this codebase for the selected game type.</p>
