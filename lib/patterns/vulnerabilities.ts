@@ -202,8 +202,6 @@ export function detectVulnerabilities(content: string): VulnerabilityMatch[] {
   const lines = content.split('\n');
   const matches: VulnerabilityMatch[] = [];
 
-  const functionRanges = extractFunctionRanges(content);
-
   for (const pattern of VULNERABILITY_PATTERNS) {
     try {
       let regex: RegExp;
@@ -219,7 +217,10 @@ export function detectVulnerabilities(content: string): VulnerabilityMatch[] {
         if (regex.test(line)) {
           const lineNum = i + 1;
           const snippet = getSnippetAroundLine(lines, lineNum, 3);
-          const fullFunction = getEnclosingFunction(content, lineNum, functionRanges);
+          // fullFunction: show 10 lines of context
+          const fnStart = Math.max(0, i - 5);
+          const fnEnd = Math.min(lines.length, i + 6);
+          const fullFunction = lines.slice(fnStart, fnEnd).join('\n');
           matches.push({
             pattern,
             line: lineNum,

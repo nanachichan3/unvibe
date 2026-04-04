@@ -268,19 +268,24 @@ export function detectBugs(content: string): BugMatch[] {
 
   for (const pattern of BUG_PATTERNS) {
     try {
-      const regex = typeof pattern.pattern === 'string'
-        ? new RegExp(pattern.pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
-        : new RegExp(pattern.pattern.source, pattern.pattern.flags.includes('g') ? pattern.pattern.flags : pattern.pattern.flags + 'g');
+      const source = typeof pattern.pattern === 'string'
+        ? pattern.pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        : pattern.pattern.source;
+      const flags = typeof pattern.pattern === 'string'
+        ? 'g'
+        : (pattern.pattern.flags.includes('g') ? pattern.pattern.flags : pattern.pattern.flags + 'g');
+      const regex = new RegExp(source, flags);
 
-      // Build a function-to-lines map for fullFunction extraction
-      const functionRanges = extractFunctionRanges(content);
-
-      for (const line of lines) {
+      for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+        const line = lines[lineIdx]!;
         regex.lastIndex = 0;
         if (regex.test(line)) {
-          const lineNum = lines.indexOf(line) + 1;
+          const lineNum = lineIdx + 1;
           const snippet = getSnippetAroundLine(lines, lineNum, 3);
-          const fullFunction = getEnclosingFunction(content, lineNum, functionRanges);
+          // fullFunction: show 10 lines of context starting from this line
+          const fnStart = Math.max(0, lineIdx - 5);
+          const fnEnd = Math.min(lines.length, lineIdx + 6);
+          const fullFunction = lines.slice(fnStart, fnEnd).join('\n');
           matches.push({
             pattern,
             line: lineNum,
