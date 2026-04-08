@@ -102,7 +102,7 @@ export default function Home() {
 
   // Landing state
   return (
-    <main>
+    <main className="page-shell">
       <SiteHeader />
       {phase.name === 'error' && (
         <div style={{ maxWidth: 720, margin: '0 auto', padding: '24px 32px 0' }}>
@@ -113,8 +113,10 @@ export default function Home() {
         </div>
       )}
       <Hero onFile={onFile} onGitHubData={onGitHubData} onError={onError} />
-      <Features />
-      <HowItWorks />
+      <div className="container">
+        <Features />
+        <HowItWorks />
+      </div>
       <Footer />
     </main>
   );
