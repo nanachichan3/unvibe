@@ -5,94 +5,70 @@ import { Shield, Gamepad2, Brain, Lock, Globe, Users } from 'lucide-react';
 const features = [
   {
     icon: Brain,
-    title: 'Instant Analytics',
-    description: 'Drop your code, get metrics in seconds. Files, languages, complexity — all client-side, no uploads.',
+    tag: 'Analytics',
+    title: 'Instant Codebase Metrics',
+    desc: 'Drop your code, get files, languages, complexity, and largest files — in seconds. All client-side, no uploads.',
+    wide: true,
   },
   {
     icon: Gamepad2,
-    title: 'Code Games',
-    description: 'Turn your actual codebase into quizzes. Guess the file, component duels, dependency paths.',
+    tag: 'Games',
+    title: '14 Code Games',
+    desc: 'Guess the File, Find the Bug, Trace the Call, Spot the Vulnerability, and more — all built from your actual codebase.',
+    wide: false,
   },
   {
     icon: Shield,
+    tag: 'AI · BYOK',
     title: 'AI-Powered Insights',
-    description: 'Bring your own API key. Get cognitive debt analysis and AI-generated questions tailored to your code.',
+    desc: 'Add your own API key. Get cognitive debt analysis and AI-generated questions tailored to your code.',
+    wide: false,
   },
   {
     icon: Lock,
+    tag: 'Privacy',
     title: '100% Private',
-    description: 'Your code never leaves your browser. No uploads, no servers, no logging.',
+    desc: 'Your code never leaves your browser. No uploads, no servers, no logging.',
+    wide: false,
   },
   {
     icon: Globe,
-    title: 'Any Language',
-    description: 'JavaScript, Python, Rust, Go, or COBOL — if it\'s in your archive, we analyze it.',
+    tag: 'Any Language',
+    title: '50+ Languages',
+    desc: 'JavaScript, Python, Rust, Go, TypeScript, Ruby, or COBOL — if it\'s in your archive, we analyze it.',
+    wide: false,
   },
   {
     icon: Users,
-    title: 'Team Building',
-    description: 'Games work solo or with your team. Track progress, build shared understanding.',
+    tag: 'GitHub',
+    title: 'GitHub Integration',
+    desc: 'Connect any public repository by URL. Fetch files directly without downloading a zip.',
+    wide: false,
   },
 ];
 
 export default function Features() {
   return (
-    <section id="features" className="section" style={{
-      background: 'linear-gradient(180deg, transparent 0%, rgba(123,92,255,0.03) 50%, transparent 100%)',
-    }}>
-      <div className="container">
-        <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-          <div className="badge" style={{ marginBottom: '20px', display: 'inline-flex' }}>
-            Why Unvibe
-          </div>
-          <h2 style={{
-            fontFamily: 'Outfit',
-            fontSize: 'clamp(32px, 5vw, 48px)',
-            fontWeight: 700,
-            marginBottom: '16px',
-            letterSpacing: '-0.02em',
-          }}>
-            Everything you need to
-            <br />
-            <span className="gradient-text">understand your code</span>
-          </h2>
-          <p style={{ fontSize: '17px', color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto' }}>
-            No installs, no signups, no data collection. Just upload and play.
-          </p>
-        </div>
+    <section id="features">
+      <p className="panel-label" style={{ textAlign: 'center', marginBottom: 8 }}>Why Unvibe</p>
+      <h2 className="panel-title" style={{ textAlign: 'center', marginBottom: 40 }}>
+        Everything you need to understand your codebase
+      </h2>
 
-        <div className="grid-3">
-          {features.map((feature, i) => {
-            const Icon = feature.icon;
-            return (
-              <div
-                key={i}
-                className="card animate-fade-up"
-                style={{
-                  padding: '32px',
-                  animationDelay: `${i * 80}ms`,
-                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                }}
-              >
-                <div className="icon-box" style={{ marginBottom: '20px' }}>
-                  <Icon size={22} color="var(--accent)" strokeWidth={1.75} />
-                </div>
-                <h3 style={{
-                  fontFamily: 'Outfit',
-                  fontSize: '18px',
-                  fontWeight: 600,
-                  marginBottom: '10px',
-                  letterSpacing: '-0.01em',
-                }}>
-                  {feature.title}
-                </h3>
-                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.65 }}>
-                  {feature.description}
-                </p>
+      <div className="feature-grid">
+        {features.map((f, i) => {
+          const Icon = f.icon;
+          return (
+            <div key={i} className={`feat ${f.wide ? 'feat-wide' : 'feat-third'}`}>
+              <div className="feat-icon">
+                <Icon size={18} />
               </div>
-            );
-          })}
-        </div>
+              <span className="feat-tag">{f.tag}</span>
+              <h3>{f.title}</h3>
+              <p>{f.desc}</p>
+            </div>
+          );
+        })}
       </div>
     </section>
   );

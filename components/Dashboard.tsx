@@ -1,14 +1,11 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Files, Code, Layers, AlertTriangle, TrendingUp, FolderTree, ChevronDown, ChevronRight, Bot, RefreshCw, AlertCircle } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { DashboardOverview } from './DashboardOverview';
+import { DashboardFiles } from './DashboardFiles';
+import { DashboardGames } from './DashboardGames';
 import type { FileInfo, ComplexityMetrics, GameQuestion } from '@/lib/types';
-import { buildDirectoryTree } from '@/lib/parser';
-import { fetchRepoTree, fetchFileCommits } from '@/lib/github';
 import type { GitHubRoundData } from '@/lib/parser';
-import { escapeHtml } from '@/lib/sanitize';
-import Games, { GAME_TYPES } from './Games';
 
 interface GitHubSource {
   owner: string;
@@ -21,606 +18,187 @@ interface DashboardProps {
   metrics: ComplexityMetrics;
   questions: GameQuestion[];
   gitHubData?: GitHubSource;
+  onReset: () => void;
 }
 
-const LOAD_COLORS = {
-  low: '#34D399',
-  medium: '#FBBF24',
-  high: '#F97316',
-  critical: '#F87171',
-};
+type MainView = 'overview' | 'files' | 'games';
 
-const LANG_COLORS = ['#7B5CFF', '#5C8FFF', '#34D399', '#FBBF24', '#F97316', '#F87171', '#EC4899', '#8B5CF6'];
+export default function Dashboard({ files, metrics, questions, gitHubData, onReset }: DashboardProps) {
+  const [mainView, setMainView] = useState<MainView>('overview');
+  const [showDebug, setShowDebug] = useState(false);
+  const [debugQuery, setDebugQuery] = useState('');
+  const [debugPage, setDebugPage] = useState(1);
 
-// All available game types with labels — imported from Games.tsx
-
-export default function Dashboard({ files, metrics, questions, gitHubData }: DashboardProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'files' | 'games'>('overview');
-  const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set(['root']));
-  const [showAIConfig, setShowAIConfig] = useState(false);
-  const [aiConfig, setAiConfig] = useState<{ apiKey: string; provider: 'gemini' | 'openai' }>({
-    apiKey: '',
-    provider: 'gemini',
-  });
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
-  const [aiSuccess, setAiSuccess] = useState(false);
-  const [aiInsights, setAiInsights] = useState<{ insights: string[]; cognitiveDebtSignals: string[] } | null>(null);
-  const [extraQuestions, setExtraQuestions] = useState<GameQuestion[]>([]);
-  const [soloGame, setSoloGame] = useState<string | null>(null);
-
-  // GitHub round data for infinite game generation
+  // GitHub round data for games (fetched async)
   const [gitHubRoundData, setGitHubRoundData] = useState<GitHubRoundData | null>(null);
-  const [gitHubLoading, setGitHubLoading] = useState(false);
 
-  // Memoize files so Games useMemo is stable
-  const stableFiles = useMemo(() => files, [files]);
-  const stableMetrics = useMemo(() => metrics, [metrics]);
+  // For debug: all included events
+  const includedEvents = useMemo(() => {
+    const q = debugQuery.trim().toLowerCase();
+    if (q.length === 0) return files;
+    return files.filter(f =>
+      `${f.path} ${f.name} ${f.extension}`.toLowerCase().includes(q)
+    );
+  }, [files, debugQuery]);
 
-  // Load API key from localStorage on mount
-  useEffect(() => {
-    try {
-      const savedKey = localStorage.getItem('unvibe_api_key');
-      const savedProvider = localStorage.getItem('unvibe_api_provider');
-      if (savedKey) {
-        setAiConfig({ apiKey: savedKey, provider: (savedProvider as 'gemini' | 'openai') || 'gemini' });
-      }
-    } catch {
-      // localStorage not available
-    }
-  }, []);
+  const debugPageSize = 50;
+  const debugTotalPages = Math.max(1, Math.ceil(includedEvents.length / debugPageSize));
+  const safeDebugPage = Math.min(debugPage, debugTotalPages);
+  const debugPageItems = useMemo(() => {
+    const start = (safeDebugPage - 1) * debugPageSize;
+    return includedEvents.slice(start, start + debugPageSize);
+  }, [includedEvents, safeDebugPage]);
 
-  // Fetch processed GitHub data for infinite game rounds
-  useEffect(() => {
-    if (!gitHubData) {
-      setGitHubRoundData(null);
-      return;
-    }
-    let cancelled = false;
-    setGitHubLoading(true);
-
-    async function buildGitHubRoundData() {
-      const gh = gitHubData as GitHubSource; // safe: we guard above
-      try {
-        // Get top source files from the repo
-        const repoFiles = await fetchRepoTree(
-          gh.owner,
-          gh.repo,
-          true,
-          gh.token
-        );
-        if (cancelled) return;
-
-        // Pick top 15 code files to get commit history for
-        const codeFilePaths = repoFiles
-          .filter(f => !f.path.includes('node_modules') && !f.path.includes('.git') && !f.path.includes('test') && !f.path.includes('spec'))
-          .slice(0, 15)
-          .map(f => f.path);
-
-        // Fetch commits for each file in parallel
-        const commitResults = await Promise.allSettled(
-          codeFilePaths.map(path =>
-            fetchFileCommits(gh.owner, gh.repo, path, gh.token)
-          )
-        );
-
-        if (cancelled) return;
-
-        const fileCommits: Record<string, string[]> = {};
-        const allCommitDates: string[] = [];
-        const fileAuthors: Record<string, string> = {};
-        let repoStart = new Date().toISOString();
-        let repoEnd = new Date(0).toISOString();
-
-        commitResults.forEach((result, i) => {
-          if (result.status !== 'fulfilled') return;
-          const commits = result.value;
-          if (commits.length === 0) return;
-          const path = codeFilePaths[i]!;
-          fileCommits[path] = commits.map(c => c.date);
-          allCommitDates.push(...commits.map(c => c.date));
-          fileAuthors[path] = commits[0]!.author;
-
-          for (const c of commits) {
-            if (c.date < repoStart) repoStart = c.date;
-            if (c.date > repoEnd) repoEnd = c.date;
-          }
-        });
-
-        if (!cancelled) {
-          setGitHubRoundData({
-            fileCommits,
-            allCommitDates,
-            fileAuthors,
-            repoStart,
-            repoEnd,
-          });
-        }
-      } catch (err) {
-        console.warn('[Unvibe] Failed to build GitHub round data:', err);
-        if (!cancelled) setGitHubRoundData(null);
-      } finally {
-        if (!cancelled) setGitHubLoading(false);
-      }
-    }
-
-    buildGitHubRoundData();
-    return () => { cancelled = true; };
-  }, [gitHubData]);
-
-  // Save API key to localStorage when it changes
-  const updateAiConfig = (config: typeof aiConfig) => {
-    setAiConfig(config);
-    try {
-      localStorage.setItem('unvibe_api_key', config.apiKey);
-      localStorage.setItem('unvibe_api_provider', config.provider);
-    } catch {
-      // localStorage not available
-    }
-  };
-
-  const tree = buildDirectoryTree(files);
   const tabs = [
     { id: 'overview' as const, label: 'Overview' },
     { id: 'files' as const, label: 'Files' },
     { id: 'games' as const, label: 'Games' },
   ];
 
-  const toggleDir = (path: string) => {
-    const next = new Set(expandedDirs);
-    if (next.has(path)) next.delete(path);
-    else next.add(path);
-    setExpandedDirs(next);
-  };
-
-  const runAIAnalysis = async () => {
-    if (!aiConfig.apiKey) return;
-    setAiLoading(true);
-    setAiError(null);
-    setAiSuccess(false);
-    try {
-      const { generateAIQuestions, analyzeWithAI, generateFunctionAgeQuestions } = await import('@/lib/ai');
-
-      const [analysis, newQuestions] = await Promise.all([
-        analyzeWithAI(files, metrics, { apiKey: aiConfig.apiKey, provider: aiConfig.provider }),
-        generateAIQuestions(files, metrics, { apiKey: aiConfig.apiKey, provider: aiConfig.provider }, gitHubData),
-      ]);
-
-      setAiInsights(analysis);
-
-      if (gitHubData) {
-        try {
-          const fnAgeQuestions = await generateFunctionAgeQuestions(
-            gitHubData.owner,
-            gitHubData.repo,
-            files,
-            aiConfig.apiKey,
-            gitHubData.token
-          );
-          setExtraQuestions([...newQuestions, ...fnAgeQuestions]);
-        } catch {
-          setExtraQuestions(newQuestions);
-        }
-      } else {
-        setExtraQuestions(newQuestions);
-      }
-
-      setAiSuccess(true);
-      setTimeout(() => setAiSuccess(false), 3000);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'AI analysis failed. Check your API key and try again.';
-      setAiError(msg);
-    }
-    setAiLoading(false);
-  };
-
-  // Filter questions by selected game types
   return (
-    <section style={{ padding: '80px 0 120px' }}>
-      <div className="container">
-        {/* Header */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: '40px',
-          flexWrap: 'wrap',
-          gap: '16px',
-        }}>
-          <div>
-            <h2 style={{ fontFamily: 'Outfit', fontSize: '32px', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '8px' }}>
-              Your Codebase
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
-              {metrics.totalFiles.toLocaleString()} files · {metrics.totalLines.toLocaleString()} lines · {metrics.languageDistribution.length} languages
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: '2px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', padding: '4px', border: '1px solid var(--border-subtle)' }}>
+    <div className="dashboard">
+      {/* Header */}
+      <div className="dashboard-header">
+        <div>
+          <p className="db-eyebrow">Analysis Complete</p>
+          <h2 className="db-title">Your Codebase</h2>
+        </div>
+        <div className="db-header-actions">
+          <div className="source-toggle" role="tablist" aria-label="Dashboard section">
             {tabs.map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  padding: '10px 20px',
-                  background: activeTab === tab.id ? 'var(--bg-elevated)' : 'transparent',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-muted)',
-                  cursor: 'pointer',
-                  fontFamily: 'Outfit',
-                  fontWeight: 600,
-                  fontSize: '14px',
-                  transition: 'all 0.2s',
-                  borderBottom: activeTab === tab.id ? '2px solid var(--accent)' : '2px solid transparent',
-                }}
+                type="button"
+                className={mainView === tab.id ? 'active' : ''}
+                onClick={() => setMainView(tab.id)}
               >
                 {tab.label}
               </button>
             ))}
           </div>
+          <button className="db-reset-btn" onClick={onReset}>
+            ← Start over
+          </button>
         </div>
-
-        {/* Overview Tab */}
-        {activeTab === 'overview' && (
-          <div>
-            {/* Stat cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
-              {[
-                { icon: Files, label: 'Files', value: metrics.totalFiles.toLocaleString(), color: 'var(--accent)' },
-                { icon: Code, label: 'Lines', value: metrics.totalLines.toLocaleString(), color: '#5C8FFF' },
-                { icon: Layers, label: 'Languages', value: String(metrics.languageDistribution.length), color: '#34D399' },
-                { icon: AlertTriangle, label: 'Complexity', value: metrics.estimatedCognitiveLoad, color: LOAD_COLORS[metrics.estimatedCognitiveLoad] },
-              ].map(({ icon: Icon, label, value, color }, i) => (
-                <div key={i} className="card animate-fade-up" style={{ padding: '24px', animationDelay: `${i * 80}ms` }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'JetBrains Mono' }}>{label}</span>
-                    <Icon size={16} color={color} />
-                  </div>
-                  <div style={{ fontFamily: 'Outfit', fontSize: '32px', fontWeight: 700, color, letterSpacing: '-0.02em', textTransform: 'capitalize' }}>
-                    {value}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Charts */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '32px' }}>
-              <div className="card animate-fade-up" style={{ padding: '28px', animationDelay: '320ms' }}>
-                <h3 style={{ fontFamily: 'Outfit', fontSize: '16px', fontWeight: 600, marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ width: '8px', height: '8px', background: 'var(--accent)', borderRadius: '50%', display: 'inline-block' }} />
-                  Language Distribution
-                </h3>
-                <div style={{ height: '240px' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={metrics.languageDistribution.slice(0, 6)}
-                        dataKey="lines"
-                        nameKey="language"
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={90}
-                        paddingAngle={3}
-                        label={({ language, percentage }) => `${percentage}%`}
-                        labelLine={false}
-                      >
-                        {metrics.languageDistribution.slice(0, 6).map((_, i) => (
-                          <Cell key={i} fill={LANG_COLORS[i]} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{ background: '#16161D', border: '1px solid #2A2A36', borderRadius: '8px', fontSize: '13px' }}
-                        formatter={(value: number) => [`${value.toLocaleString()} lines`, 'Lines']}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '16px' }}>
-                  {metrics.languageDistribution.slice(0, 6).map((lang, i) => (
-                    <div key={lang.language} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: LANG_COLORS[i], display: 'inline-block' }} />
-                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{lang.language}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="card animate-fade-up" style={{ padding: '28px', animationDelay: '400ms' }}>
-                <h3 style={{ fontFamily: 'Outfit', fontSize: '16px', fontWeight: 600, marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <TrendingUp size={16} color="var(--accent)" />
-                  Lines by Language
-                </h3>
-                <div style={{ height: '240px' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={metrics.languageDistribution.slice(0, 8)} layout="vertical">
-                      <XAxis type="number" stroke="#5C5C6E" fontSize={11} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                      <YAxis type="category" dataKey="language" stroke="#5C5C6E" fontSize={11} width={70} />
-                      <Tooltip
-                        contentStyle={{ background: '#16161D', border: '1px solid #2A2A36', borderRadius: '8px', fontSize: '13px' }}
-                        formatter={(value: number) => [`${value.toLocaleString()} lines`, 'Lines']}
-                      />
-                      <Bar dataKey="lines" radius={[0, 4, 4, 0]}>
-                        {metrics.languageDistribution.slice(0, 8).map((_, i) => (
-                          <Cell key={i} fill={LANG_COLORS[i]} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-
-            {/* Largest files */}
-            <div className="card animate-fade-up" style={{ padding: '28px', animationDelay: '480ms', marginBottom: '32px' }}>
-              <h3 style={{ fontFamily: 'Outfit', fontSize: '16px', fontWeight: 600, marginBottom: '20px' }}>
-                Largest Files
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {metrics.largestFiles.slice(0, 8).map((file, i) => (
-                  <div key={i} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '10px 14px',
-                    background: 'var(--bg-elevated)',
-                    borderRadius: 'var(--radius-sm)',
-                  }}>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '12px', fontFamily: 'JetBrains Mono', minWidth: '20px' }}>{i + 1}</span>
-                    <span style={{ flex: 1, fontSize: '13px', fontFamily: 'JetBrains Mono', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {escapeHtml(file.path)}
-                    </span>
-                    <span style={{ fontSize: '12px', fontFamily: 'JetBrains Mono', color: 'var(--accent)' }}>
-                      {file.lines.toLocaleString()} lines
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* AI Insights */}
-            <div className="card animate-fade-up" style={{ padding: '28px', animationDelay: '560ms' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: aiInsights ? '24px' : 0 }}>
-                <h3 style={{ fontFamily: 'Outfit', fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Bot size={16} color="var(--accent)" />
-                  AI Insights
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>(BYOK)</span>
-                </h3>
-                <button
-                  onClick={() => setShowAIConfig(!showAIConfig)}
-                  style={{
-                    padding: '8px 16px',
-                    background: showAIConfig ? 'var(--accent-subtle)' : 'var(--bg-elevated)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 'var(--radius-sm)',
-                    color: 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  {showAIConfig ? 'Hide' : 'Configure'}
-                </button>
-              </div>
-
-              {showAIConfig && (
-                <div style={{
-                  padding: '24px',
-                  background: 'var(--bg-elevated)',
-                  borderRadius: 'var(--radius-md)',
-                  marginBottom: '24px',
-                }}>
-                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                    Add your API key for cognitive debt analysis and unlimited game questions.
-                    Your key is stored locally and never sent to our servers.
-                  </p>
-                  <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-                    <select
-                      value={aiConfig.provider}
-                      onChange={(e) => updateAiConfig({ ...aiConfig, provider: e.target.value as 'gemini' | 'openai' })}
-                      style={{
-                        padding: '12px 16px',
-                        background: 'var(--bg-primary)',
-                        border: '1px solid var(--border)',
-                        borderRadius: 'var(--radius-sm)',
-                        color: '#fff',
-                        fontSize: '13px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <option value="gemini">Gemini</option>
-                      <option value="openai">OpenAI</option>
-                    </select>
-                    <input
-                      type="password"
-                      placeholder="Paste your API key..."
-                      value={aiConfig.apiKey}
-                      onChange={(e) => updateAiConfig({ ...aiConfig, apiKey: e.target.value })}
-                      style={{
-                        flex: 1,
-                        padding: '12px 16px',
-                        background: 'var(--bg-primary)',
-                        border: '1px solid var(--border)',
-                        borderRadius: 'var(--radius-sm)',
-                        color: '#fff',
-                        fontSize: '13px',
-                        outline: 'none',
-                      }}
-                    />
-                  </div>
-
-                  {aiError && (
-                    <div style={{
-                      padding: '12px 16px',
-                      background: 'rgba(248,113,113,0.08)',
-                      border: '1px solid rgba(248,113,113,0.2)',
-                      borderRadius: '8px',
-                      fontSize: '13px',
-                      color: '#F87171',
-                      marginBottom: '12px',
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '8px',
-                    }}>
-                      <AlertCircle size={14} style={{ flexShrink: 0, marginTop: '2px' }} />
-                      {aiError}
-                    </div>
-                  )}
-
-                  {aiSuccess && (
-                    <div style={{
-                      padding: '12px 16px',
-                      background: 'rgba(52,211,153,0.08)',
-                      border: '1px solid rgba(52,211,153,0.2)',
-                      borderRadius: '8px',
-                      fontSize: '13px',
-                      color: '#34D399',
-                      marginBottom: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}>
-                      ✓ AI analysis complete — new questions added to Games tab!
-                    </div>
-                  )}
-
-                  <button
-                    onClick={runAIAnalysis}
-                    disabled={!aiConfig.apiKey || aiLoading}
-                    className="btn-primary"
-                    style={{ opacity: !aiConfig.apiKey || aiLoading ? 0.5 : 1, fontSize: '14px', padding: '12px 24px' }}
-                  >
-                    {aiLoading ? (
-                      <><RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> Analyzing codebase...</>
-                    ) : (
-                      <><Bot size={14} /> Run AI Analysis</>
-                    )}
-                  </button>
-                </div>
-              )}
-
-              {aiInsights && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                  <div>
-                    <h4 style={{ fontSize: '13px', color: '#34D399', fontWeight: 600, marginBottom: '12px', fontFamily: 'Outfit' }}>💡 Insights</h4>
-                    {aiInsights.insights.map((insight, i) => (
-                      <p key={i} style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '10px', paddingLeft: '14px', borderLeft: '2px solid #34D399', lineHeight: 1.6 }}>
-                        {insight}
-                      </p>
-                    ))}
-                  </div>
-                  <div>
-                    <h4 style={{ fontSize: '13px', color: '#FBBF24', fontWeight: 600, marginBottom: '12px', fontFamily: 'Outfit' }}>⚠️ Cognitive Debt</h4>
-                    {aiInsights.cognitiveDebtSignals.map((signal, i) => (
-                      <p key={i} style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '10px', paddingLeft: '14px', borderLeft: '2px solid #FBBF24', lineHeight: 1.6 }}>
-                        {signal}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Files Tab */}
-        {activeTab === 'files' && (
-          <div className="card animate-fade-up" style={{ padding: '28px' }}>
-            <h3 style={{ fontFamily: 'Outfit', fontSize: '18px', fontWeight: 600, marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FolderTree size={18} color="var(--accent)" />
-              File Browser
-            </h3>
-            <div style={{ maxHeight: '600px', overflow: 'auto', fontFamily: 'JetBrains Mono', fontSize: '13px' }}>
-              {renderTree(tree, expandedDirs, toggleDir)}
-            </div>
-          </div>
-        )}
-
-        {/* Games Tab */}
-        {activeTab === 'games' && (
-          <>
-            {/* Game type selector — all types always available in infinite mode */}
-            <div className="card animate-fade-up" style={{ padding: '16px 24px', marginBottom: '24px' }}>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px', fontFamily: 'Outfit', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Available Games
-              </p>
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                {GAME_TYPES.map(game => (
-                  <span key={game.id} style={{
-                    padding: '6px 14px',
-                    background: 'var(--bg-elevated)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 'var(--radius-md)',
-                    color: 'var(--text-secondary)',
-                    fontSize: '12px',
-                    fontFamily: 'var(--font-jetbrains)',
-                  }}>
-                    {game.label}
-                  </span>
-                ))}
-              </div>
-              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '10px' }}>
-                Infinite mode — questions generated on demand. Select a game type in the games panel.
-              </p>
-            </div>
-
-            <Games
-              files={stableFiles}
-              metrics={stableMetrics}
-              gitHubData={gitHubRoundData ?? undefined}
-              soloGame={soloGame}
-              setSoloGame={setSoloGame}
-            />
-          </>
-        )}
       </div>
 
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
-    </section>
-  );
-}
+      {/* Tab Content */}
+      {mainView === 'overview' && (
+        <DashboardOverview
+          files={files}
+          metrics={metrics}
+          showDebug={showDebug}
+          debugQuery={debugQuery}
+          debugPage={debugPage}
+          debugTotalPages={debugTotalPages}
+          safeDebugPage={safeDebugPage}
+          debugPageItems={debugPageItems}
+          onToggleDebug={() => { setShowDebug(prev => !prev); setDebugPage(1); }}
+          onDebugQueryChange={(q) => { setDebugQuery(q); setDebugPage(1); }}
+          onDebugPageChange={setDebugPage}
+        />
+      )}
 
-function renderTree(node: ReturnType<typeof buildDirectoryTree>, expanded: Set<string>, toggle: (path: string) => void, depth = 0): React.ReactNode {
-  if (depth > 4) return null;
-  return (
-    <div style={{ paddingLeft: depth > 0 ? '20px' : 0 }}>
-      {node.children?.map((child, i) => (
-        <div key={i}>
-          <div
-            onClick={() => child.type === 'directory' && toggle(child.path)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '5px 8px',
-              borderRadius: '4px',
-              cursor: child.type === 'directory' ? 'pointer' : 'default',
-              color: child.type === 'directory' ? 'var(--text-primary)' : 'var(--text-secondary)',
-            }}
-          >
-            {child.type === 'directory' ? (
-              expanded.has(child.path)
-                ? <ChevronDown size={13} />
-                : <ChevronRight size={13} />
-            ) : (
-              <span style={{ width: '13px' }} />
-            )}
-            <span style={{ fontSize: '13px' }}>{child.type === 'directory' ? '📁' : '📄'}</span>
-            <span>{escapeHtml(child.name)}</span>
-            {child.fileInfo && (
-              <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-muted)' }}>
-                {child.fileInfo.lines.toLocaleString()} lines
-              </span>
-            )}
+      {mainView === 'files' && (
+        <DashboardFiles
+          files={files}
+          metrics={metrics}
+          gitHubData={gitHubData}
+          onGitHubRoundData={setGitHubRoundData}
+        />
+      )}
+
+      {mainView === 'games' && (
+        <DashboardGames
+          files={files}
+          metrics={metrics}
+          questions={questions}
+          gitHubData={gitHubRoundData ?? undefined}
+        />
+      )}
+
+      {/* Debug footer */}
+      <div className="dashboard-footer-debug">
+        <button
+          type="button"
+          className="dashboard-debug-text-btn"
+          onClick={() => { setShowDebug(prev => !prev); setDebugPage(1); }}
+        >
+          {showDebug ? 'Close debug' : 'Debug included files'}
+        </button>
+        <span style={{ marginLeft: 'auto', fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: 'var(--vim-line-number)' }}>
+          {files.length.toLocaleString()} files in this codebase
+        </span>
+      </div>
+
+      {/* Debug Panel */}
+      {showDebug && (
+        <section className="debug-panel">
+          <div className="debug-head">
+            <div>
+              <p className="db-eyebrow">Debug</p>
+              <h3 className="timeline-title">Files included in current view</h3>
+            </div>
+            <span className="debug-count">{includedEvents.length.toLocaleString()} included</span>
           </div>
-          {child.type === 'directory' && expanded.has(child.path) && renderTree(child, expanded, toggle, depth + 1)}
-        </div>
-      ))}
+          <div className="debug-controls">
+            <input
+              value={debugQuery}
+              onChange={(e) => { setDebugQuery(e.target.value); setDebugPage(1); }}
+              placeholder="Search path/name/extension..."
+              aria-label="Search included files"
+            />
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: 'var(--vim-comment)', whiteSpace: 'nowrap' }}>
+              Page {safeDebugPage} / {debugTotalPages}
+            </span>
+          </div>
+          <div className="debug-table-wrap">
+            <table className="debug-table">
+              <thead>
+                <tr>
+                  <th>Path</th>
+                  <th>Name</th>
+                  <th>Extension</th>
+                  <th>Lines</th>
+                </tr>
+              </thead>
+              <tbody>
+                {debugPageItems.map((file, idx) => (
+                  <tr key={`${file.path}-${idx}`}>
+                    <td style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.path}</td>
+                    <td>{file.name}</td>
+                    <td>{file.extension}</td>
+                    <td>{file.lines.toLocaleString()}</td>
+                  </tr>
+                ))}
+                {debugPageItems.length === 0 && (
+                  <tr>
+                    <td colSpan={4}>No files match current filter.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="debug-pager">
+            <button
+              type="button"
+              className="db-reset-btn"
+              disabled={safeDebugPage <= 1}
+              onClick={() => setDebugPage(p => Math.max(1, p - 1))}
+            >
+              Prev
+            </button>
+            <button
+              type="button"
+              className="db-reset-btn"
+              disabled={safeDebugPage >= debugTotalPages}
+              onClick={() => setDebugPage(p => Math.min(debugTotalPages, p + 1))}
+            >
+              Next
+            </button>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

@@ -748,3 +748,1105 @@ pre {
   h1 { font-size: clamp(28px, 6vw, 48px) !important; }
   .vim-set-selector { gap: 2px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEWPULSE-STYLE PAGE SHELL (used by redesigned page.tsx)
+   VIM theme preserved; structure matches ViewPulse UX
+   ═══════════════════════════════════════════════════════════════════ */
+
+.page-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+/* ─── Error Banner ──────────────────────────────────────────────── */
+.error-banner {
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: var(--radius-md);
+  padding: 14px 20px;
+  margin: 24px auto;
+  max-width: 720px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 13px;
+  color: #f87171;
+}
+
+.error-banner button {
+  background: transparent;
+  border: 1px solid #f87171;
+  color: #f87171;
+  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+
+/* ─── Loading Overlay ───────────────────────────────────────────── */
+.loading-overlay {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--vim-bg);
+}
+
+.loading-card {
+  text-align: center;
+  padding: 60px 40px;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(86, 156, 214, 0.15);
+  border-top-color: #569cd6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 24px;
+}
+
+.loading-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--vim-fg);
+  margin-bottom: 8px;
+}
+
+.loading-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--vim-comment);
+}
+
+/* ─── Hero Band ───────────────────────────────────────────────── */
+.hero-band {
+  position: relative;
+  padding: 100px 0 80px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.hero-band__decor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hero-glow {
+  position: absolute;
+  top: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 400px;
+  background: radial-gradient(ellipse, rgba(86, 156, 214, 0.08) 0%, transparent 70%);
+}
+
+.hero-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--vim-comment);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 20px;
+}
+
+.hero-band h1 {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: clamp(40px, 6vw, 72px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: var(--vim-fg) !important;
+  margin-bottom: 24px;
+}
+
+.txt-red { color: #f14c4c !important; }
+.txt-outline { color: transparent !important; -webkit-text-stroke: 1px var(--vim-fg); }
+
+.hero-lead {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  color: var(--vim-comment);
+  max-width: 560px;
+  margin: 0 auto 40px;
+  line-height: 1.7;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ─── Stats Bento ─────────────────────────────────────────────── */
+.stats-bento {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 60px;
+}
+
+@media (max-width: 768px) {
+  .stats-bento { grid-template-columns: repeat(2, 1fr); }
+}
+
+.stat-tile {
+  background: #252526;
+  border: 1px solid var(--vim-border);
+  border-radius: var(--radius-md);
+  padding: 24px 20px;
+  text-align: center;
+}
+
+.stat-num {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--vim-fg);
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.stat-num .accent { color: var(--vim-keyword); }
+
+.stat-desc {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--vim-comment);
+  line-height: 1.4;
+}
+
+/* ─── Upload Panel ────────────────────────────────────────────── */
+.upload-panel {
+  max-width: 720px;
+  margin: 0 auto 80px;
+  padding: 48px 40px;
+  background: #252526;
+  border: 1px solid var(--vim-border);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.panel-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--vim-comment);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+}
+
+.panel-title {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  color: var(--vim-fg) !important;
+  margin-bottom: 32px;
+}
+
+.upload-zone {
+  border: 2px dashed var(--vim-border);
+  border-radius: var(--radius-md);
+  padding: 60px 32px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+}
+
+.upload-zone:hover, .upload-zone--drag {
+  border-color: var(--vim-keyword);
+  background: rgba(86, 156, 214, 0.04);
+}
+
+.upload-orb {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(86, 156, 214, 0.1);
+  border: 1px solid rgba(86, 156, 214, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  color: var(--vim-keyword);
+}
+
+.upload-orb svg {
+  width: 28px;
+  height: 28px;
+}
+
+.upload-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--vim-fg);
+  margin-bottom: 8px;
+}
+
+.upload-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--vim-comment);
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.format-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.format-chip {
+  padding: 4px 12px;
+  background: var(--vim-active-line);
+  border: 1px solid var(--vim-border);
+  border-radius: var(--radius-sm);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--vim-string);
+}
+
+.upload-note {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--vim-comment);
+  margin-top: 20px;
+  line-height: 1.6;
+}
+
+.upload-note a {
+  color: var(--vim-keyword) !important;
+}
+
+/* ─── How Band ────────────────────────────────────────────────── */
+.how-band {
+  padding: 60px 0 80px;
+}
+
+.steps-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-top: 32px;
+}
+
+@media (max-width: 768px) {
+  .steps-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+.step-item {
+  padding: 24px 20px;
+  background: #252526;
+  border: 1px solid var(--vim-border);
+  border-radius: var(--radius-md);
+}
+
+.step-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--vim-keyword);
+  opacity: 0.4;
+  margin-bottom: 12px;
+}
+
+.step-item h3 {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--vim-fg) !important;
+  margin-bottom: 8px;
+}
+
+.step-item p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--vim-comment);
+  line-height: 1.6;
+}
+
+/* ─── Feature Grid ─────────────────────────────────────────────── */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 80px;
+}
+
+@media (max-width: 1024px) {
+  .feature-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .feature-grid { grid-template-columns: 1fr; }
+}
+
+.feat {
+  background: #252526;
+  border: 1px solid var(--vim-border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  transition: border-color 0.2s;
+}
+
+.feat:hover {
+  border-color: var(--vim-keyword);
+}
+
+.feat-wide { grid-column: span 2; }
+.feat-narrow { grid-column: span 1; }
+.feat-third { grid-column: span 1; }
+
+.feat-icon {
+  width: 36px;
+  height: 36px;
+  background: rgba(86, 156, 214, 0.1);
+  border: 1px solid rgba(86, 156, 214, 0.2);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  color: var(--vim-keyword);
+}
+
+.feat-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.feat-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--vim-comment);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.feat h3 {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--vim-fg) !important;
+  margin-bottom: 8px;
+}
+
+.feat p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--vim-comment);
+  line-height: 1.6;
+}
+
+/* ─── CTA Footer ───────────────────────────────────────────────── */
+.cta-footer {
+  text-align: center;
+  padding: 80px 0;
+  border-top: 1px solid var(--vim-border);
+}
+
+.cta-footer h2 {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 48px !important;
+  font-weight: 700 !important;
+  color: var(--vim-fg) !important;
+  margin-bottom: 16px;
+  line-height: 1.1;
+}
+
+.cta-footer p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--vim-comment);
+  margin-bottom: 32px;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
+}
+
+.cta-footer span {
+  color: var(--vim-keyword) !important;
+}
+
+/* ─── Site Header ──────────────────────────────────────────────── */
+.site-header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  border: 1.5px solid var(--vim-border);
+  background: var(--vim-bg);
+  padding: 0.85rem 1.2rem;
+  margin-bottom: 0;
+}
+
+.brand-mark {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--vim-fg) !important;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.brand-name {
+  line-height: 1;
+}
+
+.brand-logo {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  color: var(--vim-keyword);
+}
+
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  font-size: 0.8rem;
+}
+
+.site-nav a {
+  color: var(--vim-comment) !important;
+  text-decoration: none !important;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  transition: color 0.15s;
+}
+
+.site-nav a:hover {
+  color: var(--vim-fg) !important;
+}
+
+/* ─── Dashboard ────────────────────────────────────────────────── */
+.dashboard {
+  padding: 0 0 80px;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+  gap: 16px;
+  border-bottom: 1px solid var(--vim-border);
+  padding-bottom: 24px;
+}
+
+.db-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--vim-comment);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+.db-title {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  color: var(--vim-fg) !important;
+}
+
+.db-header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.source-toggle {
+  display: flex;
+  gap: 2px;
+  background: var(--vim-active-line);
+  border: 1px solid var(--vim-border);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+}
+
+.source-toggle button {
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: var(--vim-comment);
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  padding: 6px 14px;
+  transition: all 0.15s;
+}
+
+.source-toggle button.active {
+  background: var(--vim-bg);
+  color: var(--vim-fg);
+}
+
+.db-reset-btn {
+  background: transparent;
+  border: 1px solid var(--vim-border);
+  color: var(--vim-comment);
+  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.db-reset-btn:hover {
+  border-color: var(--vim-keyword);
+  color: var(--vim-keyword);
+}
+
+/* ─── Timeline Panel ───────────────────────────────────────────── */
+.timeline-panel {
+  background: #252526;
+  border: 1px solid var(--vim-border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.timeline-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.timeline-title {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: var(--vim-fg) !important;
+}
+
+.timeline-meta {
+  display: flex;
+  gap: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--vim-comment);
+  flex-wrap: wrap;
+}
+
+.timeline-presets {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.timeline-scale {
+  position: relative;
+  height: 120px;
+  background: var(--vim-bg);
+  border: 1px solid var(--vim-border);
+  border-radius: var(--radius-sm);
+  cursor: crosshair;
+  user-select: none;
+}
+
+.timeline-spark {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.timeline-selection {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  background: rgba(86, 156, 214, 0.15);
+  border: 1px solid rgba(86, 156, 214, 0.5);
+  border-radius: 4px;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px;
+}
+
+.timeline-selection:active {
+  cursor: grabbing;
+}
+
+.timeline-handle {
+  width: 10px;
+  height: 100%;
+  background: var(--vim-keyword);
+  border-radius: 2px;
+  cursor: ew-resize;
+  flex-shrink: 0;
+  border: none;
+}
+
+.timeline-handle.start { margin-right: 2px; }
+.timeline-handle.end { margin-left: 2px; }
+
+.timeline-year-axis {
+  position: relative;
+  height: 20px;
+  margin-top: 4px;
+}
+
+.timeline-year-tick {
+  position: absolute;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--vim-line-number);
+  transform: translateX(-50%);
+}
+
+.chart-hover-tooltip {
+  position: absolute;
+  top: -40px;
+  transform: translateX(-50%);
+  background: var(--vim-bg);
+  border: 1px solid var(--vim-keyword);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--vim-fg);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.chart-hover-tooltip strong {
+  display: block;
+  color: var(--vim-keyword);
+}
+
+/* ─── Dashboard Grid ───────────────────────────────────────────── */
+.db-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+
+.db-tile {
+  background: #252526;
+  border: 1px solid var(--vim-border);
+  border-radius: var(--radius-md);
+  padding: 20px 24px;
+}
+
+.span-2 { grid-column: span 2; }
+.span-5 { grid-column: span 5; }
+.span-6 { grid-column: span 6; }
+.span-7 { grid-column: span 7; }
+.span-12 { grid-column: span 12; }
+
+@media (max-width: 1024px) {
+  .span-2, .span-5, .span-6, .span-7 { grid-column: span 6; }
+  .span-12 { grid-column: span 12; }
+}
+
+@media (max-width: 640px) {
+  .db-grid { grid-template-columns: 1fr; }
+  .span-2, .span-5, .span-6, .span-7, .span-12 { grid-column: span 1; }
+}
+
+.tile-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--vim-comment);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.tile-tag--muted {
+  color: var(--vim-line-number);
+}
+
+.tile-big {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--vim-fg);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.tile-big--sm { font-size: 22px; }
+.tile-big--ink { color: var(--vim-keyword) !important; }
+.tile-big--yellow { color: var(--vim-string) !important; }
+
+.tile-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--vim-comment);
+  line-height: 1.4;
+}
+
+.tile-sub--muted { color: var(--vim-line-number); }
+.tile-sub--dark { color: rgba(255,255,255,0.5); }
+
+/* Tile colors */
+.tile-dark { background: #1e1e1e; }
+.tile-red { border-left: 3px solid #f14c4c; }
+.tile-blue { border-left: 3px solid #569cd6; }
+.tile-green { border-left: 3px solid #22c55e; }
+.tile-yellow { border-left: 3px solid #fbbf24; }
+.tile-off { border-left: 3px solid var(--vim-border); }
+.tile-card { background: #252526; }
+
+/* ─── Channel Bars ─────────────────────────────────────────────── */
+.channel-bars-scroll {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.channel-bar-track {
+  flex: 1;
+  height: 6px;
+  background: var(--vim-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.channel-bar-fill {
+  height: 100%;
+  background: var(--vim-keyword);
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+.channel-name-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--vim-fg);
+  min-width: 120px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.channel-name-label a {
+  color: var(--vim-keyword) !important;
+}
+
+.channel-count-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--vim-comment);
+  min-width: 40px;
+  text-align: right;
+}
+
+/* ─── Hour Bars ────────────────────────────────────────────────── */
+.hour-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 80px;
+  padding-bottom: 20px;
+  position: relative;
+}
+
+.hour-bar {
+  flex: 1;
+  background: var(--vim-keyword);
+  border-radius: 2px 2px 0 0;
+  min-height: 4px;
+  transition: opacity 0.15s;
+}
+
+.hour-bar.peak {
+  background: #569cd6;
+  box-shadow: 0 0 8px rgba(86, 156, 214, 0.4);
+}
+
+.hour-labels {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--vim-line-number);
+  margin-top: 6px;
+}
+
+/* ─── Keyword Cloud ─────────────────────────────────────────────── */
+.keyword-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.keyword-bubble {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--vim-comment);
+  background: var(--vim-active-line);
+  border: 1px solid var(--vim-border);
+  border-radius: 100px;
+  padding: 3px 10px;
+  font-size: 11px;
+  transition: all 0.15s;
+}
+
+.keyword-bubble:hover {
+  border-color: var(--vim-keyword);
+  color: var(--vim-keyword);
+}
+
+.keyword-bubble.w5 { font-size: 14px; color: var(--vim-fg); }
+.keyword-bubble.w4 { font-size: 13px; }
+.keyword-bubble.w3 { font-size: 12px; }
+.keyword-bubble.w2 { font-size: 11px; }
+.keyword-bubble.w1 { font-size: 10px; }
+
+/* ─── Split Bar ────────────────────────────────────────────────── */
+.split-bar-track {
+  height: 6px;
+  background: var(--vim-border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.split-bar-fill {
+  height: 100%;
+  background: var(--vim-keyword);
+  border-radius: 3px;
+}
+
+/* ─── Bar Columns ───────────────────────────────────────────────── */
+.bar-columns {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 80px;
+}
+
+/* ─── Channel Video List ────────────────────────────────────────── */
+.channel-video-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.channel-video-item {
+  padding: 10px 14px;
+  background: var(--vim-bg);
+  border: 1px solid var(--vim-border);
+  border-radius: var(--radius-sm);
+}
+
+.channel-video-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--vim-fg);
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.channel-video-title a {
+  color: var(--vim-keyword) !important;
+}
+
+.channel-video-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--vim-comment);
+}
+
+/* ─── Export Panel (AI Tools) ──────────────────────────────────── */
+.export-panel {
+  margin-top: 0;
+}
+
+.export-panel-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--vim-border);
+  margin-bottom: 0;
+  flex-wrap: wrap;
+}
+
+.export-panel-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  color: var(--vim-comment);
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  padding: 10px 18px;
+  transition: all 0.15s;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.export-panel-tab:hover {
+  color: var(--vim-fg);
+}
+
+.export-panel-tab.active {
+  color: var(--vim-keyword);
+  border-bottom-color: var(--vim-keyword);
+  background: transparent;
+}
+
+/* ─── Games Dashboard Panel ────────────────────────────────────── */
+.games-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.game-chip {
+  padding: 6px 14px;
+  background: var(--vim-active-line);
+  border: 1px solid var(--vim-border);
+  border-radius: var(--radius-md);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--vim-comment);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.game-chip:hover {
+  border-color: var(--vim-keyword);
+  color: var(--vim-keyword);
+}
+
+.game-chip.active {
+  background: rgba(86, 156, 214, 0.15);
+  border-color: var(--vim-keyword);
+  color: var(--vim-keyword);
+}
+
+/* ─── Debug Panel ───────────────────────────────────────────────── */
+.debug-panel {
+  background: #252526;
+  border: 1px solid var(--vim-border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  margin-top: 24px;
+}
+
+.debug-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.debug-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--vim-comment);
+}
+
+.debug-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.debug-controls input {
+  flex: 1;
+  min-width: 200px;
+}
+
+.debug-table-wrap {
+  overflow-x: auto;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.debug-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+
+.debug-table th {
+  text-align: left;
+  padding: 8px 12px;
+  color: var(--vim-comment);
+  border-bottom: 1px solid var(--vim-border);
+  position: sticky;
+  top: 0;
+  background: #252526;
+}
+
+.debug-table td {
+  padding: 8px 12px;
+  color: var(--vim-fg);
+  border-bottom: 1px solid var(--vim-border);
+}
+
+.debug-table tr:hover td {
+  background: var(--vim-active-line);
+}
+
+.debug-pager {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.dashboard-footer-debug {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--vim-border);
+}
+
+.dashboard-debug-text-btn {
+  background: transparent;
+  border: none;
+  color: var(--vim-line-number);
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 4px 8px;
+  transition: color 0.15s;
+}
+
+.dashboard-debug-text-btn:hover {
+  color: var(--vim-comment);
+}
