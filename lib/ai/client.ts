@@ -1,5 +1,24 @@
 // Gemini API client with token counting and session tracking
 
+export const MODEL_OPTIONS = [
+  { value: 'gemini-2.5-flash', label: 'gemini-2.5-flash (recommended)' },
+  { value: 'gemini-2.0-flash-exp', label: 'gemini-2.0-flash-exp' },
+  { value: 'gemini-1.5-flash', label: 'gemini-1.5-flash' },
+  { value: 'gemini-1.5-flash-8b', label: 'gemini-1.5-flash-8b (lightweight)' },
+] as const;
+
+export const DEFAULT_MODEL = 'gemini-2.5-flash';
+
+/** Read the stored model from localStorage */
+export function getStoredModel(): string {
+  if (typeof window === 'undefined') return DEFAULT_MODEL;
+  try {
+    return localStorage.getItem('unvibe_model') || DEFAULT_MODEL;
+  } catch {
+    return DEFAULT_MODEL;
+  }
+}
+
 export interface AIConfig {
   apiKey: string;
   model: string;  // default: 'gemini-2.0-flash'

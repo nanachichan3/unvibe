@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import ModeToggle from '../ModeToggle';
-import AIKeySetup, { getStoredApiKey } from '../AIKeySetup';
+import AIKeySetup, { getStoredApiKey, getStoredModel } from '../AIKeySetup';
 import TokenMeter from '../TokenMeter';
 import { generateSpotVuln } from '@/lib/ai/generators';
 import { detectVulnerabilities, type VulnerabilityMatch } from '@/lib/patterns/vulnerabilities';
@@ -162,7 +162,7 @@ export default function SpotTheVuln({
       }));
 
       try {
-        const result = await generateSpotVuln(snippetData, apiKey || getStoredApiKey() || '');
+        const result = await generateSpotVuln(snippetData, apiKey || getStoredApiKey() || '', getStoredModel());
         setRoundTokens(result.tokenCost);
         onSessionTokensChange(sessionTokens + result.tokenCost);
 

@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import ModeToggle from '../ModeToggle';
-import AIKeySetup, { getStoredApiKey } from '../AIKeySetup';
+import AIKeySetup, { getStoredApiKey, getStoredModel } from '../AIKeySetup';
 import TokenMeter from '../TokenMeter';
 import { generateFindTheBug } from '@/lib/ai/generators';
 import { detectBugs, type BugMatch } from '@/lib/patterns/bugs';
@@ -225,7 +225,7 @@ export default function FindTheBug({
       const snippet = (file.content || '').substring(0, 1500);
 
       try {
-        const result = await generateFindTheBug(snippet, apiKey || getStoredApiKey() || '');
+        const result = await generateFindTheBug(snippet, apiKey || getStoredApiKey() || '', getStoredModel());
         setRoundTokens(result.tokenCost);
         onSessionTokensChange(sessionTokens + result.tokenCost);
 

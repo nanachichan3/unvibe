@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import ModeToggle from '../ModeToggle';
-import AIKeySetup, { getStoredApiKey } from '../AIKeySetup';
+import AIKeySetup, { getStoredApiKey, getStoredModel } from '../AIKeySetup';
 import TokenMeter from '../TokenMeter';
 import { generateCodeTimeline, detectCodeEra, ERA_RANGES } from '@/lib/ai/generators';
 import type { FileInfo } from '@/lib/types';
@@ -142,7 +142,7 @@ export default function CodeTimeline({
       }
 
       try {
-        const result = await generateCodeTimeline(snippet, apiKey || getStoredApiKey() || '');
+        const result = await generateCodeTimeline(snippet, apiKey || getStoredApiKey() || '', getStoredModel());
         setRoundTokens(result.tokenCost);
         onSessionTokensChange(sessionTokens + result.tokenCost);
 

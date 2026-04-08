@@ -106,7 +106,7 @@ export function detectCodeEra(content: string): EraResult {
 
 // AI-powered question generators for games
 
-import { createAIGenerator, parseJSON, type AIResponse } from './client';
+import { createAIGenerator, parseJSON, type AIResponse, getStoredModel } from './client';
 
 // ── Shared prompt builder ─────────────────────────────────────────────────────
 
@@ -126,9 +126,10 @@ export interface WhatDoesThisDoResult {
 export async function generateWhatDoesThisDo(
   snippet: string,
   apiKey: string,
-  model: string = 'gemini-2.0-flash',
+  model?: string,
 ): Promise<WhatDoesThisDoResult> {
-  const generator = createAIGenerator({ apiKey, model });
+  const effectiveModel = model || getStoredModel();
+  const generator = createAIGenerator({ apiKey, model: effectiveModel });
 
   const prompt = `${SYSTEM_PROMPT}
 
@@ -188,9 +189,10 @@ export interface FindTheBugResult {
 export async function generateFindTheBug(
   snippet: string,
   apiKey: string,
-  model: string = 'gemini-2.0-flash',
+  model?: string,
 ): Promise<FindTheBugResult> {
-  const generator = createAIGenerator({ apiKey, model });
+  const effectiveModel = model || getStoredModel();
+  const generator = createAIGenerator({ apiKey, model: effectiveModel });
 
   const prompt = `${SYSTEM_PROMPT}
 
@@ -249,9 +251,10 @@ export interface SpotTheVulnResult {
 export async function generateSpotVuln(
   snippets: { label: string; code: string }[],
   apiKey: string,
-  model: string = 'gemini-2.0-flash',
+  model?: string,
 ): Promise<SpotTheVulnResult> {
-  const generator = createAIGenerator({ apiKey, model });
+  const effectiveModel = model || getStoredModel();
+  const generator = createAIGenerator({ apiKey, model: effectiveModel });
 
   const snippetTexts = snippets
     .map((s, i) => `[${i}] ${s.label}:\n\`\`\`\n${s.code.substring(0, 500)}\n\`\`\``)
@@ -312,9 +315,10 @@ export interface TypeInferenceResult {
 export async function generateTypeInference(
   snippet: string,
   apiKey: string,
-  model: string = 'gemini-2.0-flash',
+  model?: string,
 ): Promise<TypeInferenceResult> {
-  const generator = createAIGenerator({ apiKey, model });
+  const effectiveModel = model || getStoredModel();
+  const generator = createAIGenerator({ apiKey, model: effectiveModel });
 
   const prompt = `${SYSTEM_PROMPT}
 
@@ -369,9 +373,10 @@ export interface RefactorResult {
 export async function generateRefactorOptions(
   snippet: string,
   apiKey: string,
-  model: string = 'gemini-2.0-flash',
+  model?: string,
 ): Promise<RefactorResult> {
-  const generator = createAIGenerator({ apiKey, model });
+  const effectiveModel = model || getStoredModel();
+  const generator = createAIGenerator({ apiKey, model: effectiveModel });
 
   const prompt = `${SYSTEM_PROMPT}
 
@@ -426,9 +431,10 @@ export interface CodeTimelineResult {
 export async function generateCodeTimeline(
   snippet: string,
   apiKey: string,
-  model: string = 'gemini-2.0-flash',
+  model?: string,
 ): Promise<CodeTimelineResult> {
-  const generator = createAIGenerator({ apiKey, model });
+  const effectiveModel = model || getStoredModel();
+  const generator = createAIGenerator({ apiKey, model: effectiveModel });
 
   const prompt = `${SYSTEM_PROMPT}
 
@@ -484,9 +490,10 @@ export async function generateLineAuthor(
   line: string,
   contributors: string[],
   apiKey: string,
-  model: string = 'gemini-2.0-flash',
+  model?: string,
 ): Promise<LineAuthorResult> {
-  const generator = createAIGenerator({ apiKey, model });
+  const effectiveModel = model || getStoredModel();
+  const generator = createAIGenerator({ apiKey, model: effectiveModel });
 
   const prompt = `${SYSTEM_PROMPT}
 

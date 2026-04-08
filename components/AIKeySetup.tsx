@@ -3,6 +3,16 @@
 import React, { useState, useEffect } from 'react';
 
 const STORAGE_KEY = 'unvibe_api_key';
+const MODEL_STORAGE_KEY = 'unvibe_model';
+
+const MODEL_OPTIONS = [
+  { value: 'gemini-2.5-flash', label: 'gemini-2.5-flash (recommended)' },
+  { value: 'gemini-2.0-flash-exp', label: 'gemini-2.0-flash-exp' },
+  { value: 'gemini-1.5-flash', label: 'gemini-1.5-flash' },
+  { value: 'gemini-1.5-flash-8b', label: 'gemini-1.5-flash-8b (lightweight)' },
+];
+
+const DEFAULT_MODEL = 'gemini-2.5-flash';
 
 /** Read the stored API key from localStorage */
 export function getStoredApiKey(): string | null {
@@ -11,6 +21,16 @@ export function getStoredApiKey(): string | null {
     return localStorage.getItem(STORAGE_KEY);
   } catch {
     return null;
+  }
+}
+
+/** Read the stored model from localStorage */
+export function getStoredModel(): string {
+  if (typeof window === 'undefined') return DEFAULT_MODEL;
+  try {
+    return localStorage.getItem(MODEL_STORAGE_KEY) || DEFAULT_MODEL;
+  } catch {
+    return DEFAULT_MODEL;
   }
 }
 
@@ -45,6 +65,7 @@ export default function AIKeySetup({ compact = false }: AIKeySetupProps) {
   const [key, setKey] = useState('');
   const [saved, setSaved] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [model, setModel] = useState(DEFAULT_MODEL);
 
   useEffect(() => {
     const stored = getStoredApiKey();
@@ -54,12 +75,14 @@ export default function AIKeySetup({ compact = false }: AIKeySetupProps) {
     } else {
       setShowForm(true);
     }
+    setModel(getStoredModel());
   }, []);
 
   const handleSave = () => {
     const trimmed = key.trim();
     if (!trimmed) return;
     saveApiKey(trimmed);
+    localStorage.setItem(MODEL_STORAGE_KEY, model);
     setSaved(true);
     setShowForm(false);
     // Notify all windows/tabs so game components refresh
@@ -72,6 +95,15 @@ export default function AIKeySetup({ compact = false }: AIKeySetupProps) {
     setSaved(false);
     setShowForm(true);
     window.dispatchEvent(new Event('unvibe:api-key-changed'));
+  };
+
+  const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selected = e.target.value;
+    setModel(selected);
+    if (saved) {
+      localStorage.setItem(MODEL_STORAGE_KEY, selected);
+      window.dispatchEvent(new Event('unvibe:api-key-changed'));
+    }
   };
 
   // ── Connected indicator (compact) ──────────────────────────────────────────
@@ -117,6 +149,25 @@ export default function AIKeySetup({ compact = false }: AIKeySetupProps) {
         <p style={{ margin: 0, fontSize: '12px', color: '#d4d4d4', fontFamily: "'JetBrains Mono', monospace" }}>
           {saved ? 'Update Gemini API key' : 'Add Gemini API key for AI mode'}
         </p>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+        <label style={{ fontSize: '11px', color: '#6a9955', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap' }}>
+          Model:
+        </label>
+        <select
+          value={model}
+          onChange={handleModelChange}
+          style={{
+            flex: 1, padding: '6px 8px',
+            background: 'var(--bg-primary)', border: '1px solid rgba(86,156,214,0.3)',
+            borderRadius: '4px', color: '#d4d4d4', fontSize: '11px',
+            fontFamily: "'JetBrains Mono', monospace", outline: 'none', cursor: 'pointer',
+          }}
+        >
+          {MODEL_OPTIONS.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
       </div>
       <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
         <input

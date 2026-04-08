@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import ModeToggle from '../ModeToggle';
 import TokenMeter from '../TokenMeter';
-import AIKeySetup, { getStoredApiKey } from '../AIKeySetup';
+import AIKeySetup, { getStoredApiKey, getStoredModel } from '../AIKeySetup';
 import { generateWhatDoesThisDo } from '@/lib/ai/generators';
 import { generateHeuristicDescription, generateDistractors } from '@/lib/patterns/bugs';
 import type { FileInfo } from '@/lib/types';
@@ -186,7 +186,7 @@ export default function WhatDoesThisDo({
       const snippet = extractFunctionFromFile(file, 5, 50) || file.content?.substring(0, 800) || '';
 
       try {
-        const result = await generateWhatDoesThisDo(snippet, apiKey || getStoredApiKey() || '');
+        const result = await generateWhatDoesThisDo(snippet, apiKey || getStoredApiKey() || '', getStoredModel());
         setRoundTokens(result.tokenCost);
         onSessionTokensChange(sessionTokens + result.tokenCost);
 

@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import ModeToggle from '../ModeToggle';
-import AIKeySetup, { getStoredApiKey } from '../AIKeySetup';
+import AIKeySetup, { getStoredApiKey, getStoredModel } from '../AIKeySetup';
 import TokenMeter from '../TokenMeter';
 import { generateLineAuthor } from '@/lib/ai/generators';
 import type { FileInfo } from '@/lib/types';
@@ -256,7 +256,7 @@ export default function LineAuthor({
       const { lines, startLine, endLine } = extractLines(file.content!, 3);
 
       try {
-        const result = await generateLineAuthor(lines, contributors, apiKey || getStoredApiKey() || '');
+        const result = await generateLineAuthor(lines, contributors, apiKey || getStoredApiKey() || '', getStoredModel());
         setRoundTokens(result.tokenCost);
         onSessionTokensChange(sessionTokens + result.tokenCost);
 
