@@ -2,7 +2,8 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import ModeToggle from '../ModeToggle';
-import AIKeySetup, { getStoredApiKey, getStoredModel } from '../AIKeySetup';
+import AIKeySetup, { getStoredApiKey } from '../AIKeySetup';
+import { getStoredModel } from '@/lib/ai/client';
 import TokenMeter from '../TokenMeter';
 import { generateLineAuthor } from '@/lib/ai/generators';
 import type { FileInfo } from '@/lib/types';

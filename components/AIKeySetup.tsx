@@ -1,18 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { getStoredModel, DEFAULT_MODEL, MODEL_OPTIONS } from '@/lib/ai/client';
 
 const STORAGE_KEY = 'unvibe_api_key';
-const MODEL_STORAGE_KEY = 'unvibe_model';
-
-const MODEL_OPTIONS = [
-  { value: 'gemini-2.5-flash', label: 'gemini-2.5-flash (recommended)' },
-  { value: 'gemini-2.0-flash-exp', label: 'gemini-2.0-flash-exp' },
-  { value: 'gemini-1.5-flash', label: 'gemini-1.5-flash' },
-  { value: 'gemini-1.5-flash-8b', label: 'gemini-1.5-flash-8b (lightweight)' },
-];
-
-const DEFAULT_MODEL = 'gemini-2.5-flash';
 
 /** Read the stored API key from localStorage */
 export function getStoredApiKey(): string | null {
@@ -21,16 +12,6 @@ export function getStoredApiKey(): string | null {
     return localStorage.getItem(STORAGE_KEY);
   } catch {
     return null;
-  }
-}
-
-/** Read the stored model from localStorage */
-export function getStoredModel(): string {
-  if (typeof window === 'undefined') return DEFAULT_MODEL;
-  try {
-    return localStorage.getItem(MODEL_STORAGE_KEY) || DEFAULT_MODEL;
-  } catch {
-    return DEFAULT_MODEL;
   }
 }
 
@@ -82,7 +63,7 @@ export default function AIKeySetup({ compact = false }: AIKeySetupProps) {
     const trimmed = key.trim();
     if (!trimmed) return;
     saveApiKey(trimmed);
-    localStorage.setItem(MODEL_STORAGE_KEY, model);
+    localStorage.setItem('unvibe_model', model);
     setSaved(true);
     setShowForm(false);
     // Notify all windows/tabs so game components refresh
@@ -101,7 +82,7 @@ export default function AIKeySetup({ compact = false }: AIKeySetupProps) {
     const selected = e.target.value;
     setModel(selected);
     if (saved) {
-      localStorage.setItem(MODEL_STORAGE_KEY, selected);
+      localStorage.setItem('unvibe_model', selected);
       window.dispatchEvent(new Event('unvibe:api-key-changed'));
     }
   };

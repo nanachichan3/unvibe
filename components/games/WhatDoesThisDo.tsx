@@ -3,7 +3,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import ModeToggle from '../ModeToggle';
 import TokenMeter from '../TokenMeter';
-import AIKeySetup, { getStoredApiKey, getStoredModel } from '../AIKeySetup';
+import AIKeySetup, { getStoredApiKey } from '../AIKeySetup';
+import { getStoredModel } from '@/lib/ai/client';
 import { generateWhatDoesThisDo } from '@/lib/ai/generators';
 import { generateHeuristicDescription, generateDistractors } from '@/lib/patterns/bugs';
 import type { FileInfo } from '@/lib/types';
