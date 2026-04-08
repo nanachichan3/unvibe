@@ -31,6 +31,19 @@ export function DashboardGames({ files, metrics, questions, gitHubData }: Dashbo
               title={game.desc}
             >
               {game.label}
+              {game.github && (
+                <span style={{
+                  marginLeft: 4,
+                  fontSize: 10,
+                  padding: '1px 5px',
+                  background: 'rgba(86,156,214,0.15)',
+                  border: '1px solid rgba(86,156,214,0.3)',
+                  borderRadius: 4,
+                  color: 'var(--vim-keyword)',
+                }}>
+                  GH
+                </span>
+              )}
             </span>
           ))}
         </div>
@@ -41,7 +54,11 @@ export function DashboardGames({ files, metrics, questions, gitHubData }: Dashbo
           marginTop: 12,
         }}>
           Click a game to focus · or browse all from the games panel below
-          {gitHubData ? ' · GitHub data connected' : ' · connect GitHub for commit/author games'}
+          {gitHubData ? (
+            <span style={{ color: '#34d399' }}> · GitHub data connected</span>
+          ) : (
+            <span> · games marked <span style={{ color: 'var(--vim-keyword)' }}>GH</span> require a GitHub repository</span>
+          )}
         </p>
       </div>
 

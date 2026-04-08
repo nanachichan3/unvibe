@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import SiteHeader from '@/components/site-header';
-import LandingUpload from '@/components/landing-upload';
+import Hero from '@/components/Hero';
 import Features from '@/components/Features';
 import HowItWorks from '@/components/HowItWorks';
 import Footer from '@/components/Footer';
@@ -37,22 +37,6 @@ type Phase =
 export default function Home() {
   const [phase, setPhase] = useState<Phase>({ name: 'landing' });
 
-  const handleDataLoaded = useCallback((
-    files: FileInfo[],
-    metrics: ComplexityMetrics,
-    questions: GameQuestion[],
-    gitHubData?: GitHubSource
-  ) => {
-    setPhase({ name: 'data', files, metrics, questions, gitHubData });
-    setTimeout(() => {
-      document.getElementById('dashboard')?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  }, []);
-
-  const handleError = useCallback((message: string) => {
-    setPhase({ name: 'error', message });
-  }, []);
-
   const onFile = useCallback(async (file: File) => {
     setPhase({ name: 'loading' });
     try {
@@ -63,11 +47,26 @@ export default function Home() {
       }
       const metrics = calculateMetrics(files);
       const questions = generateStaticQuestions(files, metrics);
-      handleDataLoaded(files, metrics, questions);
+      setPhase({ name: 'data', files, metrics, questions });
+      setTimeout(() => { document.getElementById('dashboard')?.scrollIntoView({ behavior: 'smooth' }); }, 100);
     } catch (err) {
       setPhase({ name: 'error', message: err instanceof Error ? err.message : 'Failed to parse archive' });
     }
-  }, [handleDataLoaded]);
+  }, []);
+
+  const onGitHubData = useCallback((
+    files: FileInfo[],
+    metrics: ComplexityMetrics,
+    questions: GameQuestion[],
+    gitHubData: GitHubSource
+  ) => {
+    setPhase({ name: 'data', files, metrics, questions, gitHubData });
+    setTimeout(() => { document.getElementById('dashboard')?.scrollIntoView({ behavior: 'smooth' }); }, 100);
+  }, []);
+
+  const onError = useCallback((message: string) => {
+    setPhase({ name: 'error', message });
+  }, []);
 
   // Loading state
   if (phase.name === 'loading') {
@@ -103,70 +102,19 @@ export default function Home() {
 
   // Landing state
   return (
-    <main className="page-shell">
+    <main>
       <SiteHeader />
-
-      {/* Error banner */}
       {phase.name === 'error' && (
-        <div className="error-banner">
-          <span><strong>Error:</strong> {phase.message}</span>
-          <button onClick={() => setPhase({ name: 'landing' })}>Try again</button>
+        <div style={{ maxWidth: 720, margin: '0 auto', padding: '24px 32px 0' }}>
+          <div className="error-banner">
+            <span><strong>Error:</strong> {phase.message}</span>
+            <button onClick={() => setPhase({ name: 'landing' })}>Try again</button>
+          </div>
         </div>
       )}
-
-      {/* HERO */}
-      <section className="hero-band">
-        <div className="hero-band__decor" aria-hidden="true">
-          <div className="hero-glow" />
-        </div>
-        <p className="hero-eyebrow">Codebase Mental-Debt Fighter · 100% Private</p>
-        <h1>
-          Decode your<br />
-          <span className="txt-red">codebase</span>{' '}
-          <span className="txt-outline">through play.</span>
-        </h1>
-        <p className="hero-lead">
-          Upload any project archive and get instant insights. Games that make you understand your own code.
-          No account. No server uploads. AI-assisted analysis when you want it.
-        </p>
-        <div className="hero-actions">
-          <a href="#upload" className="btn-primary">Upload Your Code</a>
-          <a href="https://github.com/nanachichan3/unvibe" target="_blank" rel="noreferrer" className="btn-outline">
-            View Source on GitHub →
-          </a>
-        </div>
-      </section>
-
-      {/* STATS BENTO */}
-      <div className="stats-bento">
-        <div className="stat-tile">
-          <span className="stat-num">100<span className="accent">%</span></span>
-          <p className="stat-desc">Private — runs locally in your browser</p>
-        </div>
-        <div className="stat-tile">
-          <span className="stat-num">14</span>
-          <p className="stat-desc">Unique game types</p>
-        </div>
-        <div className="stat-tile">
-          <span className="stat-num">0</span>
-          <p className="stat-desc">Server uploads required</p>
-        </div>
-        <div className="stat-tile">
-          <span className="stat-num">∞</span>
-          <p className="stat-desc">Languages and frameworks supported</p>
-        </div>
-      </div>
-
-      {/* UPLOAD */}
-      <LandingUpload onFile={onFile} />
-
-      {/* FEATURES */}
+      <Hero onFile={onFile} onGitHubData={onGitHubData} onError={onError} />
       <Features />
-
-      {/* HOW IT WORKS */}
       <HowItWorks />
-
-      {/* FOOTER */}
       <Footer />
     </main>
   );
