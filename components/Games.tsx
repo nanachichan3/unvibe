@@ -552,13 +552,16 @@ export default function Games({ files, metrics, gitHubData, soloGame, setSoloGam
             </div>
           )}
 
-          {/* Legacy games (rendered with the existing parser-based question system) */}
-          {!['what-does-this-do', 'find-the-bug', 'spot-the-vuln', 'dependency-path', 'type-inference', 'refactor-this', 'read-the-arch', 'function-age', 'code-author', 'commit-message', 'line-author'].includes(gameType) && gitHubData !== undefined && !currentQ ? (
+          {/* Legacy games — only show when NOT an AI game type */}
+          {/* Legacy games — only show when NOT an AI game type */}
+          {!['what-does-this-do', 'find-the-bug', 'spot-the-vuln', 'dependency-path', 'type-inference', 'refactor-this', 'read-the-arch', 'function-age', 'code-author', 'commit-message', 'line-author'].includes(gameType) && !currentQ && (
             <div className="vim-empty">
               <div className="vim-empty-title">No question available</div>
               <p>Not enough data in this codebase for the selected game type.</p>
             </div>
-          ) : (
+          )}
+
+          {!['what-does-this-do', 'find-the-bug', 'spot-the-vuln', 'dependency-path', 'type-inference', 'refactor-this', 'read-the-arch', 'function-age', 'code-author', 'commit-message', 'line-author'].includes(gameType) && currentQ && (
             <div className="vim-card" style={{ marginBottom: '20px' }}>
               <div className="vim-card-header">
                 <span>{currentQ.type}</span>
@@ -568,19 +571,10 @@ export default function Games({ files, metrics, gitHubData, soloGame, setSoloGam
               </div>
 
               <div style={{ padding: '20px' }}>
-                {/* Question */}
-                <h3 style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: '14px',
-                  color: '#d4d4d4',
-                  marginBottom: '20px',
-                  lineHeight: 1.6,
-                  fontWeight: 400,
-                }}>
+                <h3 style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '14px', color: '#d4d4d4', marginBottom: '20px', lineHeight: 1.6, fontWeight: 400 }}>
                   {currentQ.question}
                 </h3>
 
-                {/* Code snippet */}
                 {currentQ.codeSnippet && (
                   <div className="vim-code" style={{ marginBottom: '20px' }}>
                     <div className="vim-code-header">
@@ -593,16 +587,10 @@ export default function Games({ files, metrics, gitHubData, soloGame, setSoloGam
                   </div>
                 )}
 
-                {/* Function-age timeline */}
                 {(currentQ.type === 'function-age' || currentQ.type === 'code-author') && currentQ.sparklineData && currentQ.dateRange && currentQ.proximateAnswer && (
-                  <FunctionAgeTimeline
-                    question={currentQ}
-                    revealed={revealed}
-                    onGuess={handleTimelineGuess}
-                  />
+                  <FunctionAgeTimeline question={currentQ} revealed={revealed} onGuess={handleTimelineGuess} />
                 )}
 
-                {/* Regular answer options */}
                 {currentQ.type !== 'complexity-race' && currentQ.type !== 'function-age' && currentQ.type !== 'code-author' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
                     {currentQ.options.map((option, i) => {
@@ -612,16 +600,9 @@ export default function Games({ files, metrics, gitHubData, soloGame, setSoloGam
                       if (revealed) {
                         if (isCorrect) cls = 'vim-option-correct';
                         else if (isSelected) cls = 'vim-option-wrong';
-                      } else if (isSelected) {
-                        cls = 'vim-option-selected';
-                      }
+                      } else if (isSelected) cls = 'vim-option-selected';
                       return (
-                        <button
-                          key={i}
-                          className={`vim-option ${cls}`}
-                          onClick={() => !revealed && handleAnswer(option)}
-                          disabled={revealed}
-                        >
+                        <button key={i} className={`vim-option ${cls}`} onClick={() => !revealed && handleAnswer(option)} disabled={revealed}>
                           <span className="vim-option-letter">
                             {revealed ? (isCorrect ? '✓' : isSelected ? '✗' : String.fromCharCode(65 + i)) : String.fromCharCode(65 + i)}
                           </span>
@@ -632,26 +613,17 @@ export default function Games({ files, metrics, gitHubData, soloGame, setSoloGam
                   </div>
                 )}
 
-                {/* Complexity race: click-in-order UI */}
                 {currentQ.type === 'complexity-race' && (
                   <div>
                     <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: '#6a9955', marginBottom: '12px' }}>
-                      {complexityStep === 0
-                        ? '// Click files in order from LARGEST to SMALLEST'
-                        : `// Selected: ${complexityStep}/4`}
+                      {complexityStep === 0 ? '// Click files in order from LARGEST to SMALLEST' : `// Selected: ${complexityStep}/4`}
                     </p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
                       {currentQ.options.map((option, i) => {
                         const isChosen = complexityOrder.includes(option);
                         const isNext = !isChosen && complexityStep < 4;
                         return (
-                          <button
-                            key={i}
-                            className={`vim-option ${isChosen ? 'vim-option-selected' : ''}`}
-                            onClick={() => isNext && !revealed && complexitySelect(option)}
-                            disabled={isChosen || revealed}
-                            style={{ opacity: isChosen ? 0.5 : 1 }}
-                          >
+                          <button key={i} className={`vim-option ${isChosen ? 'vim-option-selected' : ''}`} onClick={() => isNext && !revealed && complexitySelect(option)} disabled={isChosen || revealed} style={{ opacity: isChosen ? 0.5 : 1 }}>
                             <span className="vim-option-letter">
                               {isChosen ? `${complexityOrder.indexOf(option) + 1}` : String.fromCharCode(65 + i)}
                             </span>
@@ -663,7 +635,6 @@ export default function Games({ files, metrics, gitHubData, soloGame, setSoloGam
                   </div>
                 )}
 
-                {/* Timeline info for function-age when no sparkline */}
                 {(currentQ.type === 'function-age' || currentQ.type === 'code-author') && !currentQ.sparklineData && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
                     {currentQ.options.map((option, i) => {
@@ -673,16 +644,9 @@ export default function Games({ files, metrics, gitHubData, soloGame, setSoloGam
                       if (revealed) {
                         if (isCorrect) cls = 'vim-option-correct';
                         else if (isSelected) cls = 'vim-option-wrong';
-                      } else if (isSelected) {
-                        cls = 'vim-option-selected';
-                      }
+                      } else if (isSelected) cls = 'vim-option-selected';
                       return (
-                        <button
-                          key={i}
-                          className={`vim-option ${cls}`}
-                          onClick={() => !revealed && handleAnswer(option)}
-                          disabled={revealed}
-                        >
+                        <button key={i} className={`vim-option ${cls}`} onClick={() => !revealed && handleAnswer(option)} disabled={revealed}>
                           <span className="vim-option-letter">
                             {revealed ? (isCorrect ? '✓' : isSelected ? '✗' : String.fromCharCode(65 + i)) : String.fromCharCode(65 + i)}
                           </span>
@@ -693,49 +657,29 @@ export default function Games({ files, metrics, gitHubData, soloGame, setSoloGam
                   </div>
                 )}
 
-                {/* Result */}
                 {revealed && (
                   <div className={`vim-result ${selected === currentQ.answer || (timelineGuess && timelineGuess.pts > 0) ? 'vim-result-correct' : selected ? 'vim-result-wrong' : ''}`}>
-                    {currentQ.type === 'function-age' || currentQ.type === 'code-author' ? (
+                    {(currentQ.type === 'function-age' || currentQ.type === 'code-author') ? (
                       timelineGuess ? (
                         <div>
                           <div className="vim-result-points">+{timelineGuess.pts.toLocaleString()} pts</div>
-                          <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: '#6a9955', marginTop: '8px' }}>
-                            {currentQ.explanation}
-                          </p>
+                          <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: '#6a9955', marginTop: '8px' }}>{currentQ.explanation}</p>
                         </div>
-                      ) : (
-                        <div>
-                          <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '13px', color: '#d4d4d4' }}>
-                            {currentQ.explanation}
-                          </p>
-                        </div>
-                      )
+                      ) : <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '13px', color: '#d4d4d4' }}>{currentQ.explanation}</p>
                     ) : (
                       <div>
-                        <p style={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: '13px',
-                          color: selected === currentQ.answer ? '#22c55e' : '#f14c4c',
-                          fontWeight: 700,
-                          marginBottom: '8px',
-                        }}>
+                        <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '13px', color: selected === currentQ.answer ? '#22c55e' : '#f14c4c', fontWeight: 700, marginBottom: '8px' }}>
                           {selected === currentQ.answer ? '✓ Correct!' : '✗ Wrong'}
                         </p>
-                        <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: '#6a9955' }}>
-                          {currentQ.explanation}
-                        </p>
+                        <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: '#6a9955' }}>{currentQ.explanation}</p>
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* Next button */}
                 {revealed && (
                   <div className="vim-next">
-                    <button className="vim-btn vim-btn-primary" onClick={nextRound}>
-                      next
-                    </button>
+                    <button className="vim-btn vim-btn-primary" onClick={nextRound}>next</button>
                   </div>
                 )}
               </div>

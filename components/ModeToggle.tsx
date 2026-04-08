@@ -18,6 +18,7 @@ export default function ModeToggle({ simple, onSimpleChange, roundTokens = 0 }: 
           gap: '12px',
           fontFamily: "'JetBrains Mono', monospace",
           fontSize: '13px',
+          marginBottom: '6px',
         }}
       >
         {/* Simple option */}
@@ -99,16 +100,30 @@ export default function ModeToggle({ simple, onSimpleChange, roundTokens = 0 }: 
           )}
           AI
           {!simple && (
-            <span style={{ color: '#9b87f5', fontSize: '11px' }}>+token counter</span>
+            <span style={{ color: '#9b87f5', fontSize: '11px' }}>+GPT</span>
           )}
         </button>
+      </div>
+
+      {/* Explanation text */}
+      <div style={{
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: '10px',
+        color: '#6a9955',
+        lineHeight: 1.5,
+      }}>
+        {simple ? (
+          <span>// Simple: fast, no account needed. Uses heuristics to describe code.</span>
+        ) : (
+          <span>// AI mode: paste a Gemini or OpenAI key below. Harder questions, token cost.</span>
+        )}
       </div>
 
       {/* Token cost display when AI mode */}
       {!simple && roundTokens > 0 && (
         <div
           style={{
-            marginTop: '8px',
+            marginTop: '6px',
             fontFamily: "'JetBrains Mono', monospace",
             fontSize: '11px',
             color: '#9b87f5',

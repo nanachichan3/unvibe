@@ -5,6 +5,30 @@ import type { GameQuestion } from '@/lib/types';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+// Downsample large datasets to a target count using largest-triangle-three-buckets
+function downsample<T extends { date: string; count: number }>(data: T[], target: number): T[] {
+  if (data.length <= target) return data;
+  const result: T[] = [data[0]!];
+  const bucketSize = (data.length - 2) / (target - 2);
+  let a = 0;
+  for (let i = 0; i < target - 2; i++) {
+    const bucketStart = Math.floor((i + 1) * bucketSize) + 1;
+    const bucketEnd = Math.min(Math.floor((i + 2) * bucketSize) + 1, data.length - 1);
+    let maxArea = -1, maxIdx = bucketStart;
+    const ax = a, ay = data[a]!.count;
+    for (let j = bucketStart; j < bucketEnd; j++) {
+      const bx = j, by = data[j]!.count;
+      const nextAX = (i + 2) * bucketSize / 2;
+      const area = Math.abs((ax - nextAX) * (by - ay) - (bx - nextAX) * (ay - ay)) / 2;
+      if (area > maxArea) { maxArea = area; maxIdx = j; }
+    }
+    result.push(data[maxIdx]!);
+    a = maxIdx;
+  }
+  result.push(data[data.length - 1]!);
+  return result;
+}
+
 function formatShortDate(d: Date): string {
   return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 }
@@ -53,54 +77,41 @@ export function FunctionAgeTimeline({ question, revealed, onGuess }: Props) {
     return new Date(question.proximateAnswer).getTime();
   }, [question.proximateAnswer]);
 
-  // Build sparkline path from commit activity data
+  // Build sparkline path — DOWNSAMPLE to max 52 buckets to prevent lag
   const sparkPath = useMemo(() => {
     const data = question.sparklineData;
-    if (!data || data.length === 0) {
-      // Fallback: just show a flat line
-      return { path: '', maxCount: 1 };
-    }
+    if (!data || data.length === 0) return { path: '', maxCount: 1, buckets: [] };
+    const MAX_BUCKETS = 52;
+    const sampled = data.length <= MAX_BUCKETS ? data : downsample(data, MAX_BUCKETS);
     const W = 1000;
     const H = 120;
-    const maxCount = Math.max(...data.map(d => d.count), 1);
-    if (data.length === 1) {
-      const y = H - (data[0]!.count / maxCount) * (H - 10);
-      return {
-        path: `M 0 ${y.toFixed(2)} L ${W} ${y.toFixed(2)} L ${W} 120 L 0 120 Z`,
-        maxCount,
-      };
+    const maxCount = Math.max(...sampled.map(d => d.count), 1);
+    if (sampled.length === 1) {
+      const y = H - (sampled[0]!.count / maxCount) * (H - 10);
+      return { path: `M 0 ${y.toFixed(2)} L ${W} ${y.toFixed(2)} L ${W} 120 L 0 120 Z`, maxCount, buckets: sampled };
     }
-    const points = data.map((bucket, i) => {
-      const x = (i / (data.length - 1)) * W;
-      const y = H - (bucket.count / maxCount) * (H - 10);
-      return { x, y };
-    });
-    const line = points.reduce((acc, pt, i) => {
-      if (i === 0) return `M ${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`;
-      const prev = points[i - 1]!;
+    const points = sampled.map((bucket, i) => ({
+      x: (i / (sampled.length - 1)) * W,
+      y: H - (bucket.count / maxCount) * (H - 10),
+    }));
+    const line = points.slice(1).reduce((acc, pt, i) => {
+      const prev = points[i]!;
       const cpX = ((prev.x + pt.x) / 2).toFixed(2);
       return `${acc} C ${cpX} ${prev.y.toFixed(2)} ${cpX} ${pt.y.toFixed(2)} ${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`;
-    }, '');
-    return {
-      path: `${line} L 1000 120 L 0 120 Z`,
-      maxCount,
-    };
+    }, `M ${points[0]!.x.toFixed(2)} ${points[0]!.y.toFixed(2)}`);
+    return { path: `${line} L 1000 120 L 0 120 Z`, maxCount, buckets: sampled };
   }, [question.sparklineData]);
 
-  // Year ticks for axis
+  // Year ticks for axis — single render
   const yearTicks = useMemo(() => {
-    const ticks: { year: number; pct: number }[] = [];
-    if (!question.sparklineData || question.sparklineData.length === 0) return ticks;
+    if (!question.sparklineData || question.sparklineData.length === 0) return [];
     const n = question.sparklineData.length;
-    let prevYear: number | null = null;
-    question.sparklineData.forEach((d, i) => {
+    const seen = new Set<number>();
+    return question.sparklineData.reduce<{ year: number; pct: number }[]>((acc, d, i) => {
       const year = new Date(d.date).getFullYear();
-      if (year !== prevYear) {
-        prevYear = year;
-        ticks.push({ year, pct: n > 1 ? (i / (n - 1)) * 100 : 50 });
-      }
-    });
-    return ticks;
+      if (!seen.has(year)) { seen.add(year); acc.push({ year, pct: n > 1 ? (i / (n - 1)) * 100 : 50 }); }
+      return acc;
+    }, []);
   }, [question.sparklineData]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
@@ -256,24 +267,9 @@ export function FunctionAgeTimeline({ question, revealed, onGuess }: Props) {
         )}
       </svg>
 
-      {/* Year axis */}
+      {/* Year axis — single render */}
       {yearTicks.length > 0 && (
         <div className="vim-timeline-axis">
-          {yearTicks.map((t, i) => (
-            <span
-              key={`${t.year}-${i}`}
-              style={{
-                position: 'absolute',
-                left: `${t.pct}%`,
-                transform: 'translateX(-50%)',
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: '10px',
-                color: '#858585',
-              }}
-            >
-              {t.year}
-            </span>
-          ))}
           <div style={{ position: 'relative', height: '20px', marginTop: '4px' }}>
             {yearTicks.map((t, i) => (
               <span
