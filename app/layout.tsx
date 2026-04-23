@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Outfit, DM_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
+import { PostHogProvider } from '@posthog/react-server';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -23,6 +24,23 @@ const jetbrainsMono = JetBrains_Mono({
   display: 'swap',
 });
 
+// PostHog server-side initialization
+function PostHogInit() {
+  const posthogApiKey = process.env.POSTHOG_API_KEY;
+  const posthogHost = process.env.POSTHOG_HOST || 'https://app.posthog.com';
+
+  if (posthogApiKey) {
+    return (
+      <PostHogProvider
+        apiKey={posthogApiKey}
+        apiHost={posthogHost}
+        person_profiles="identified_only"
+      />
+    );
+  }
+  return null;
+}
+
 export const metadata: Metadata = {
   title: 'Unvibe — Decode Your Codebase',
   description: 'Turn your code into games. Reduce cognitive debt through play.',
@@ -34,7 +52,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${outfit.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}>
-      <body>{children}</body>
+      <body>
+        <PostHogInit />
+        {children}
+      </body>
     </html>
   );
 }
