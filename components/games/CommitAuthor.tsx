@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import type { GitHubRoundData } from '@/lib/parser';
+import { trackAIGamePlayed } from '@/lib/analytics';
 
 interface CommitAuthorProps {
   gitHubData: GitHubRoundData;
@@ -111,6 +112,7 @@ export default function CommitAuthor({
     if (revealed) return;
     setSelected(option);
     setRevealed(true);
+    trackAIGamePlayed({ gameType: 'commit-message', answered: true, correct: question?.answer === option, tokensUsed: sessionTokens });
   };
 
   const nextRound = () => {

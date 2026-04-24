@@ -7,6 +7,7 @@ import { getStoredModel } from '@/lib/ai/client';
 import TokenMeter from '../TokenMeter';
 import { generateSpotVuln } from '@/lib/ai/generators';
 import { detectVulnerabilities, type VulnerabilityMatch } from '@/lib/patterns/vulnerabilities';
+import { trackAIGamePlayed } from '@/lib/analytics';
 import type { FileInfo } from '@/lib/types';
 
 interface SpotTheVulnProps {
@@ -196,6 +197,8 @@ export default function SpotTheVuln({
     if (revealed) return;
     setSelected(label);
     setRevealed(true);
+    const vulnerableLabel = snippets.find(s => s.hasVuln)?.label;
+    trackAIGamePlayed({ gameType: 'spot-the-vuln', answered: true, correct: label === vulnerableLabel, tokensUsed: sessionTokens });
   };
 
   const nextRound = () => {

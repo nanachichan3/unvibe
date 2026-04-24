@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FileInfo, ComplexityMetrics, GameQuestion } from '@/lib/types';
 import type { GitHubRoundData } from '@/lib/parser';
 import { generateRoundQuestion } from '@/lib/parser';
+import { trackGameStarted, trackGameCompleted, trackAIGamePlayed } from '@/lib/analytics';
 import { FunctionAgeTimeline } from './FunctionAgeTimeline';
 import WhatDoesThisDo from './games/WhatDoesThisDo';
 import FindTheBug from './games/FindTheBug';
@@ -19,7 +20,11 @@ import LineAuthor from './games/LineAuthor';
 import { getSessionTokens, resetSessionTokens } from '@/lib/ai/client';
 import type { AIGameConfig } from '@/lib/types';
 
-// Shared game type definitions — imported by Dashboard for the selector
+declare global {
+  interface Window {
+    __unvibe_round_start?: number;
+  }
+}
 export const GAME_TYPES = [
   { id: 'guess-file', label: '🔍 Guess the File', desc: 'Identify files by description', github: false },
   { id: 'what-does-this-do', label: '📖 What Does This Do', desc: 'Understand code from its snippet', github: false },
@@ -209,7 +214,7 @@ export default function Games({ files, metrics, gitHubData, soloGame, setSoloGam
     }
   }, [hydrated, recentIds]);
 
-  // Reset on game type change
+  // Reset state on game type change (separate from tracking)
   useEffect(() => {
     setRoundKey(0);
     setRoundSalt(randomUint32());
@@ -219,6 +224,23 @@ export default function Games({ files, metrics, gitHubData, soloGame, setSoloGam
     setComplexityStep(0);
     setTimelineGuess(null);
   }, [gameType]);
+
+  // Track round start time
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.__unvibe_round_start = Date.now();
+    }
+  }, [roundKey]);
+
+  // Track game_started on new round
+  useEffect(() => {
+    if (!hydrated) return;
+    trackGameStarted({
+      gameType,
+      source: files.length > 0 ? 'upload' : 'demo',
+      difficulty,
+    });
+  }, [roundKey, gameType, difficulty, hydrated, files.length]);
 
   // Async question generation — runs AFTER render, so browser can always paint
   const [currentQ, setCurrentQ] = useState<GameQuestion | null>(null);
@@ -282,7 +304,18 @@ export default function Games({ files, metrics, gitHubData, soloGame, setSoloGam
     exposureRef.current[currentQ.id] = (exposureRef.current[currentQ.id] ?? 0) + 1;
     setRecentIds(prev => [...prev, currentQ.id].slice(-20));
     setRevealed(true);
-  }, [currentQ, revealed, difficulty]);
+
+    // Track game completion
+    trackGameCompleted({
+      gameType: currentQ.type,
+      correct: answer === currentQ.answer,
+      pointsEarned: pts,
+      totalPoints: score.totalPoints + pts,
+      roundsPlayed: score.roundsPlayed + 1,
+      difficulty,
+      timeSpentMs: Date.now() - (window.__unvibe_round_start ?? Date.now()),
+    });
+  }, [currentQ, revealed, difficulty, score.totalPoints, score.roundsPlayed]);
 
   const handleTimelineGuess = useCallback((guessMs: number, pts: number) => {
     if (!currentQ || revealed) return;

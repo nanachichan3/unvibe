@@ -7,6 +7,7 @@ import { getStoredModel } from '@/lib/ai/client';
 import TokenMeter from '../TokenMeter';
 import { generateRefactorOptions } from '@/lib/ai/generators';
 import type { FileInfo } from '@/lib/types';
+import { trackAIGamePlayed } from '@/lib/analytics';
 
 // ── Code smell detection & synthetic messy code ─────────────────────────────
 
@@ -425,6 +426,7 @@ export default function RefactorThis({
     if (revealed) return;
     setSelected(option);
     setRevealed(true);
+    trackAIGamePlayed({ gameType: 'refactor-this', answered: true, correct: question?.answer === option, tokensUsed: sessionTokens });
   };
 
   const nextRound = () => {

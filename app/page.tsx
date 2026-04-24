@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import SiteHeader from '@/components/site-header';
 import Hero from '@/components/Hero';
@@ -9,6 +9,7 @@ import HowItWorks from '@/components/HowItWorks';
 import Footer from '@/components/Footer';
 import type { FileInfo, ComplexityMetrics, GameQuestion } from '@/lib/types';
 import { parseArchive, calculateMetrics, generateStaticQuestions } from '@/lib/parser';
+import { trackCodebaseUploaded, trackGitHubRepoConnected, trackPageView } from '@/lib/analytics';
 
 const Dashboard = dynamic(() => import('@/components/Dashboard'), {
   loading: () => (
@@ -48,6 +49,18 @@ export default function Home() {
       const metrics = calculateMetrics(files);
       const questions = generateStaticQuestions(files, metrics);
       setPhase({ name: 'data', files, metrics, questions });
+
+      // Track upload event
+      const topLang = metrics.languageDistribution?.[0]?.language ?? 'Unknown';
+      const sizeMb = file.size / (1024 * 1024);
+      trackCodebaseUploaded({
+        fileCount: files.length,
+        totalLines: metrics.totalLines,
+        topLanguage: topLang,
+        archiveSizeMb: Math.round(sizeMb * 100) / 100,
+        uploadMethod: 'zip',
+      });
+
       setTimeout(() => { document.getElementById('dashboard')?.scrollIntoView({ behavior: 'smooth' }); }, 100);
     } catch (err) {
       setPhase({ name: 'error', message: err instanceof Error ? err.message : 'Failed to parse archive' });
@@ -61,11 +74,26 @@ export default function Home() {
     gitHubData: GitHubSource
   ) => {
     setPhase({ name: 'data', files, metrics, questions, gitHubData });
+
+    // Track GitHub connection
+    const topLang = metrics.languageDistribution?.[0]?.language ?? 'Unknown';
+    trackGitHubRepoConnected({
+      owner: gitHubData.owner,
+      repo: gitHubData.repo,
+      fileCount: files.length,
+      totalLines: metrics.totalLines,
+    });
+
     setTimeout(() => { document.getElementById('dashboard')?.scrollIntoView({ behavior: 'smooth' }); }, 100);
   }, []);
 
   const onError = useCallback((message: string) => {
     setPhase({ name: 'error', message });
+  }, []);
+
+  // Track landing page view on mount
+  useEffect(() => {
+    trackPageView('/', { referrer: document.referrer });
   }, []);
 
   // Loading state

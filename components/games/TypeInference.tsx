@@ -7,6 +7,7 @@ import { getStoredModel } from '@/lib/ai/client';
 import TokenMeter from '../TokenMeter';
 import { generateTypeInference } from '@/lib/ai/generators';
 import type { FileInfo } from '@/lib/types';
+import { trackAIGamePlayed } from '@/lib/analytics';
 
 interface TypeInferenceProps {
   files: FileInfo[];
@@ -621,6 +622,7 @@ export default function TypeInference({
     if (revealed) return;
     setSelected(option);
     setRevealed(true);
+    trackAIGamePlayed({ gameType: 'type-inference', answered: true, correct: question?.answer === option, tokensUsed: sessionTokens });
   };
 
   const nextRound = () => {

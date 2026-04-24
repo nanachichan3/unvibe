@@ -6,6 +6,7 @@ import AIKeySetup, { getStoredApiKey } from '../AIKeySetup';
 import TokenMeter from '../TokenMeter';
 import { buildDirectoryTree } from '@/lib/parser';
 import type { DirectoryNode, FileInfo, ComplexityMetrics } from '@/lib/types';
+import { trackAIGamePlayed } from '@/lib/analytics';
 
 interface ReadTheArchitectureProps {
   files: FileInfo[];
@@ -331,6 +332,7 @@ export default function ReadTheArchitecture({
     if (revealed) return;
     setSelected(option);
     setRevealed(true);
+    trackAIGamePlayed({ gameType: 'read-the-arch', answered: true, correct: question?.answer === option, tokensUsed: sessionTokens });
   };
 
   const nextRound = () => {

@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import type { GitHubRoundData } from '@/lib/parser';
+import { trackAIGamePlayed } from '@/lib/analytics';
 
 interface CommitTimelineProps {
   gitHubData: GitHubRoundData;
@@ -168,6 +169,7 @@ export default function CommitTimeline({
     if (revealed) return;
     setSelected(option);
     setRevealed(true);
+    trackAIGamePlayed({ gameType: 'function-age', answered: true, correct: commit?.quarter === option, tokensUsed: sessionTokens });
   };
 
   const nextRound = () => {

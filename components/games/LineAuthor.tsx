@@ -8,6 +8,7 @@ import TokenMeter from '../TokenMeter';
 import { generateLineAuthor } from '@/lib/ai/generators';
 import type { FileInfo } from '@/lib/types';
 import type { GitHubRoundData } from '@/lib/parser';
+import { trackAIGamePlayed } from '@/lib/analytics';
 
 interface LineAuthorProps {
   files: FileInfo[];
@@ -297,6 +298,7 @@ export default function LineAuthor({
     if (revealed) return;
     setSelected(option);
     setRevealed(true);
+    trackAIGamePlayed({ gameType: 'line-author', answered: true, correct: question?.answer === option, tokensUsed: sessionTokens });
   };
 
   const nextRound = () => {

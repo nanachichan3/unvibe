@@ -5,6 +5,7 @@ import ModeToggle from '../ModeToggle';
 import AIKeySetup, { getStoredApiKey } from '../AIKeySetup';
 import TokenMeter from '../TokenMeter';
 import type { FileInfo } from '@/lib/types';
+import { trackAIGamePlayed } from '@/lib/analytics';
 
 interface TraceTheCallProps {
   files: FileInfo[];
@@ -511,6 +512,7 @@ export default function TraceTheCall({
     if (revealed) return;
     setSelected(option);
     setRevealed(true);
+    trackAIGamePlayed({ gameType: 'dependency-path', answered: true, correct: question?.answer === option, tokensUsed: sessionTokens });
   };
 
   const nextRound = () => {

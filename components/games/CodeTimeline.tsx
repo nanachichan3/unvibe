@@ -7,6 +7,7 @@ import { getStoredModel } from '@/lib/ai/client';
 import TokenMeter from '../TokenMeter';
 import { generateCodeTimeline, detectCodeEra, ERA_RANGES } from '@/lib/ai/generators';
 import type { FileInfo } from '@/lib/types';
+import { trackAIGamePlayed } from '@/lib/analytics';
 
 interface CodeTimelineProps {
   files: FileInfo[];
@@ -177,6 +178,7 @@ export default function CodeTimeline({
     if (revealed) return;
     setSelected(option);
     setRevealed(true);
+    trackAIGamePlayed({ gameType: 'code-author', answered: true, correct: question?.answer === option, tokensUsed: sessionTokens });
   };
 
   const nextRound = () => {

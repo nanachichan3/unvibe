@@ -7,6 +7,7 @@ import { getStoredModel } from '@/lib/ai/client';
 import TokenMeter from '../TokenMeter';
 import { generateFindTheBug } from '@/lib/ai/generators';
 import { detectBugs, type BugMatch } from '@/lib/patterns/bugs';
+import { trackAIGamePlayed } from '@/lib/analytics';
 import type { FileInfo } from '@/lib/types';
 
 interface FindTheBugProps {
@@ -266,6 +267,7 @@ export default function FindTheBug({
     if (revealed) return;
     setSelected(option);
     setRevealed(true);
+    trackAIGamePlayed({ gameType: 'find-the-bug', answered: true, correct: question?.answer === option, tokensUsed: sessionTokens });
   };
 
   const nextRound = () => {

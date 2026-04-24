@@ -7,6 +7,7 @@ import AIKeySetup, { getStoredApiKey } from '../AIKeySetup';
 import { getStoredModel } from '@/lib/ai/client';
 import { generateWhatDoesThisDo } from '@/lib/ai/generators';
 import { generateHeuristicDescription, generateDistractors } from '@/lib/patterns/bugs';
+import { trackAIGamePlayed } from '@/lib/analytics';
 import type { FileInfo } from '@/lib/types';
 
 interface WhatDoesThisDoProps {
@@ -219,6 +220,12 @@ export default function WhatDoesThisDo({
     if (revealed) return;
     setSelected(option);
     setRevealed(true);
+    trackAIGamePlayed({
+      gameType: 'what-does-this-do',
+      answered: true,
+      correct: question?.answer === option,
+      tokensUsed: sessionTokens,
+    });
   };
 
   const nextRound = () => {
